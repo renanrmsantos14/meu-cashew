@@ -89,16 +89,29 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
 
   Future<void> _sincronizar() async {
     final url = _url.text.trim().replaceAll(RegExp(r'/+$'), '');
-    final token = _token.text.trim();
-    // Token novo ou endereço diferente é pareamento: mesma validação e confirmação do QR.
-    if (token.isNotEmpty || url != await meuBancoLerUrl()) {
-      if (token.isEmpty || !mbOrigemPermitida(url, debug: kDebugMode)) {
+    final segredo = _token.text;
+    // Senha, token novo ou endereço diferente é pareamento: mesma validação e confirmação do QR.
+    if (segredo.isNotEmpty || url != await meuBancoLerUrl()) {
+      if (segredo.trim().isEmpty ||
+          !mbOrigemPermitida(url, debug: kDebugMode)) {
         openSnackbar(SnackbarMessage(
-            title: "Informe um endereço https válido e o token para parear."));
+            title:
+                "Informe um endereço https válido e a senha do painel para parear."));
         return;
       }
-      if (!mounted || !await mbConfirmarEParear(context, MbPareamento(url, token))) {
-        return;
+      if (mbTokenValido(segredo.trim())) {
+        if (!mounted ||
+            !await mbConfirmarEParear(
+                context, MbPareamento(url, segredo.trim()))) return;
+      } else {
+        // A senha só sai do aparelho depois que o usuário confirma o endereço.
+        if (!mounted || !await mbConfirmarHost(context, url)) return;
+        try {
+          await mbParear(await mbPedirToken(url, segredo));
+        } on String catch (msg) {
+          openSnackbar(SnackbarMessage(title: msg));
+          return;
+        }
       }
       _token.clear();
       await _carregar();
@@ -146,7 +159,7 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
               const EdgeInsetsDirectional.only(bottom: 5, start: 20, end: 20),
           child: TextFont(
             text:
-                "Importa as transações do Meu Banco para o Cashew. O token fica guardado de forma segura no aparelho e não entra nos backups.",
+                "Importa as transações do Meu Banco para o Cashew. Para parear, digite a senha do painel e toque em Sincronizar agora. O acesso fica guardado de forma segura no aparelho e não entra nos backups.",
             fontSize: 14,
             maxLines: 10,
           ),
@@ -165,7 +178,9 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
           padding: const EdgeInsetsDirectional.symmetric(
               horizontal: 20, vertical: 5),
           child: TextInput(
-            labelText: _temToken ? "Token (já salvo, cole para trocar)" : "Token (cole aqui)",
+            labelText: _temToken
+                ? "Pareado. Senha do painel ou token para trocar"
+                : "Senha do painel ou token",
             controller: _token,
             obscureText: true,
             padding: EdgeInsetsDirectional.zero,
@@ -201,7 +216,8 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextFont(
-                  text: "${aviso['banco'] ?? 'Conexão'}: ${aviso['mensagem'] ?? ''}",
+                  text:
+                      "${aviso['banco'] ?? 'Conexão'}: ${aviso['mensagem'] ?? ''}",
                   fontSize: 14,
                   maxLines: 6,
                 ),
@@ -308,8 +324,8 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
           ),
         ),
         Padding(
-          padding:
-              const EdgeInsetsDirectional.symmetric(horizontal: 20, vertical: 5),
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 5),
           child: TextFont(
             text:
                 "Desconectar apaga o token e o ponto de sincronização. As transações já importadas continuam no app.",
@@ -344,7 +360,8 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
           padding: const EdgeInsetsDirectional.symmetric(
               horizontal: 20, vertical: 5),
           child: TextFont(
-            text: "Versão instalada: ${packageInfoGlobal?.version ?? ""}+${packageInfoGlobal?.buildNumber ?? ""}",
+            text:
+                "Versão instalada: ${packageInfoGlobal?.version ?? ""}+${packageInfoGlobal?.buildNumber ?? ""}",
             fontSize: 12,
           ),
         ),
