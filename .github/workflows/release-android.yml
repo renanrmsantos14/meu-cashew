@@ -1,32 +1,78 @@
 name: Release Android
 
+# Todo merge/push na main que mexe no app vira versão nova:
+# 1. versao: usa a versão do pubspec se ela ainda não tem tag (bump manual);
+#    senão incrementa PATCH e build, commita "Versão X [skip ci]" e cria a tag.
+#    O push com GITHUB_TOKEN não dispara workflows, então não há laço.
+# 2. web: avisa o meu-banco para recompilar o web (já com a versão nova).
+# 3. apk: compila, assina e publica a Release da tag.
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - 'budget/**'
+      - 'scripts/compilar.sh'
+  workflow_dispatch:
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  versao:
     runs-on: ubuntu-latest
+    outputs:
+      versao: ${{ steps.v.outputs.versao }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main # ponta atual, já com o bump de uma execução anterior
+          fetch-depth: 0
+
+      - name: Definir versão, commitar e criar a tag
+        id: v
+        run: |
+          atual=$(grep -m1 '^version:' budget/pubspec.yaml | awk '{print $2}' | tr -d '\r')
+          if git rev-parse -q --verify "refs/tags/v${atual}" >/dev/null; then
+            base="${atual%%+*}"
+            v="${base%.*}.$(( ${base##*.} + 1 ))+$(( ${atual#*+} + 1 ))"
+            sed -i "s/^version: .*/version: $v/" budget/pubspec.yaml
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -qam "Versão $v [skip ci]"
+          else
+            v="$atual"
+          fi
+          git tag "v$v"
+          git push origin HEAD:main "v$v"
+          echo "versao=$v" >> "$GITHUB_OUTPUT"
+
+  web:
+    needs: versao
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Disparar deploy no meu-banco
+        env:
+          GH_TOKEN: ${{ secrets.MEU_BANCO_DISPATCH_TOKEN }}
+        run: gh api repos/renanrmsantos14/meu-banco/dispatches -f event_type=cashew-main
+
+  apk:
+    needs: versao
+    runs-on: ubuntu-latest
+    env:
+      VERSAO: ${{ needs.versao.outputs.versao }}
     defaults:
       run:
         working-directory: budget
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: v${{ needs.versao.outputs.versao }}
           persist-credentials: false
-
-      - name: Conferir tag x versão do pubspec
-        run: |
-          pubver=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | tr -d '\r')
-          if [ "v${pubver}" != "${GITHUB_REF_NAME}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} difere do pubspec (v${pubver})"
-            exit 1
-          fi
-          echo "VERSAO=${pubver}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
@@ -66,6 +112,7 @@ jobs:
 
       - uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
         with:
+          tag_name: v${{ env.VERSAO }}
           files: budget/meu-cashew-${{ env.VERSAO }}.apk
           generate_release_notes: true
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Uso: scripts/nova-versao.sh [5.4.4+418]  (sem argumento: incrementa o PATCH e o build)
-# Atualiza budget/pubspec.yaml, commita e cria a tag v<versão>+<build>. Não faz push.
+# Atualiza budget/pubspec.yaml e commita. Não cria tag nem faz push: ao chegar na main,
+# o workflow Release Android publica essa versão. Use para mudar MAJOR/MINOR; o PATCH
+# já sobe sozinho a cada merge.
 set -euo pipefail
 v="${1:-}"
 raiz="$(git rev-parse --show-toplevel)"
@@ -25,6 +27,4 @@ fi
 sed -i "s/^version: .*/version: $v/" budget/pubspec.yaml
 git add budget/pubspec.yaml
 git commit -m "Versão $v"
-git tag "v$v"
-echo "Tag v$v criada. Para publicar:"
-echo "  git push origin HEAD v$v"
+echo "Versão $v commitada; o merge na main publica a Release."
