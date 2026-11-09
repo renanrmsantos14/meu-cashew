@@ -1116,6 +1116,7 @@ void openFontPicker(BuildContext context) {
         itemsAreFonts: true,
         items: [
           // These values match that of pubspec font family
+          "Geist",
           "Avenir",
           "DMSans",
           "Metropolis",
@@ -1138,8 +1139,10 @@ void openFontPicker(BuildContext context) {
 }
 
 String fontNameDisplayFilter(String value) {
-  if (value == "Avenir") {
+  if (value == "Geist") {
     return "default".tr().capitalizeFirst;
+  } else if (value == "Avenir") {
+    return "Avenir";
   } else if (value == "(Platform)") {
     return "platform".tr().capitalizeFirst;
   } else if (value == "DMSans") {
