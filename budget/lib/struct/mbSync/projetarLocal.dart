@@ -121,9 +121,11 @@ bool mbEhLancamentoManual(Transaction t) =>
 
 // Projeta o estado atual do Drift. `espelho` fornece o padrão já conhecido das regras;
 // `aplicado` (tx_pk -> categoria aplicada pelo sync) alimenta os ajustes de transações `mb:`.
+// `existentes` recebe as chaves que continuam no Drift mas ficam fora da projeção (orçamento
+// arquivado, transação de outro tipo): ausência nelas não pode virar tombstone.
 Future<Map<String, Projetado>> mbProjetarLocal(
     Map<String, Espelho> espelho, Map<String, String> aplicado,
-    {required String agora}) async {
+    {required String agora, Set<String>? existentes}) async {
   final out = <String, Projetado>{};
   final semPrefixo = mbIdsSemPrefixo([for (final e in espelho.values) e.registro]);
   void add(Projetado? p) {
@@ -143,10 +145,12 @@ Future<Map<String, Projetado>> mbProjetarLocal(
   for (final a in await database.select(database.associatedTitles).get()) {
     add(mbProjRegra(a, espelho['regras/${mbIdLocal(a.associatedTitlePk, semPrefixo)}']?.registro.dados));
   }
-  for (final b in await (database.select(database.budgets)
-        ..where((b) => b.archived.equals(false)))
-      .get()) {
-    add(mbProjOrcamento(b));
+  for (final b in await database.select(database.budgets).get()) {
+    if (b.archived) {
+      existentes?.add('orcamentos/${mbIdLocal(b.budgetPk, semPrefixo)}');
+    } else {
+      add(mbProjOrcamento(b));
+    }
   }
   (await database.select(database.objectives).get()).forEach((o) => add(mbProjObjetivo(o)));
 
@@ -159,11 +163,18 @@ Future<Map<String, Projetado>> mbProjetarLocal(
       add(mbProjAssinatura(t));
     } else if (mbEhLancamentoManual(t)) {
       add(mbProjLancamento(t, carteiras[t.walletFk] ?? ''));
+    } else {
+      final id = mbIdLocal(t.transactionPk, semPrefixo);
+      existentes?.addAll(['lancamentos/$id', 'assinaturas/$id']);
     }
   }
   for (final pk in {...mbPresentes.keys, ...aplicado.keys}) {
     final t = mbPresentes[pk];
+    final vigente = espelho['ajustes/${pk.substring(pk.startsWith('mb:') ? 3 : 0)}'];
     add(projetarAjuste(
+        ajusteDeCategoriaVigente: vigente != null &&
+            vigente.registro.deletedAt == null &&
+            vigente.registro.dados?['categoria_id'] != null,
         txPk: pk,
         categoriaPkAtual: t?.categoryFk,
         categoriaPkAplicada: aplicado[pk],

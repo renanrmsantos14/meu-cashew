@@ -255,13 +255,16 @@ Projetado? projetarAjuste({
   required bool existeLocal,
   required String nomeCategoria,
   required String? editadoEm,
+  bool ajusteDeCategoriaVigente = false,
 }) {
   final id = txPk.startsWith('mb:') ? txPk.substring(3) : txPk;
   if (categoriaPkAplicada == null) return null;
   if (!existeLocal) {
     return Projetado('ajustes', id, {'gasto': 0}, editadoEm);
   }
-  if (categoriaPkAtual != null && categoriaPkAtual != categoriaPkAplicada) {
+  // Voltar à categoria aplicada com um ajuste ainda vigente precisa sobrescrever o ajuste antigo.
+  if (categoriaPkAtual != null &&
+      (categoriaPkAtual != categoriaPkAplicada || ajusteDeCategoriaVigente)) {
     return Projetado(
         'ajustes',
         id,

@@ -117,19 +117,23 @@ Future<void> _enviarFila(MbCliente cliente) async {
 // Retorna true se sincronizou. Nunca lança: guarda a última mensagem em meuBancoUltimoErro.
 Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
   if (meuBancoSincronizando.value) return false;
-  final cliente = clienteParaTeste ?? await mbClienteConfigurado();
-  if (cliente == null) return false; // não configurado: silencioso
   meuBancoSincronizando.value = true;
   try {
+    final cliente = clienteParaTeste ?? await mbClienteConfigurado();
+    if (cliente == null) return false; // não configurado: silencioso
     await mbCriarTabelas();
     await _migrarCursorAntigo();
 
     final agora = isoMs(DateTime.now());
     var espelho = await mbLerEspelho();
-    final atuais =
-        await mbProjetarLocal(espelho, await mbLerAplicado(), agora: agora);
+    final existentes = <String>{};
+    final atuais = await mbProjetarLocal(espelho, await mbLerAplicado(),
+        agora: agora, existentes: existentes);
     final mudancas = detectarMudancasLocais(
-        espelho: espelho, atuais: atuais, agora: agora);
+        espelho: espelho,
+        atuais: atuais,
+        agora: agora,
+        existentes: existentes);
     // Ajustes não têm exclusão local, mas guardam a projeção para não serem reenviados a cada rodada.
     await mbGravarEspelho([
       for (final m in mudancas)

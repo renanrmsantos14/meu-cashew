@@ -33,6 +33,7 @@ List<MudancaLocal> detectarMudancasLocais({
   required Map<String, Projetado> atuais,
   required String agora,
   Set<String> semExclusaoLocal = const {'ajustes'},
+  Set<String> existentes = const {},
 }) {
   final out = <MudancaLocal>[];
   for (final p in atuais.values) {
@@ -60,7 +61,8 @@ List<MudancaLocal> detectarMudancasLocais({
     if (e.projecao == null ||
         r.deletedAt != null ||
         semExclusaoLocal.contains(r.tabela) ||
-        atuais.containsKey(r.chave)) continue;
+        atuais.containsKey(r.chave) ||
+        existentes.contains(r.chave)) continue;
     out.add(MudancaLocal(Registro(r.tabela, r.id, null, agora, agora), null));
   }
   return out;

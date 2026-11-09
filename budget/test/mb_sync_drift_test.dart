@@ -4,9 +4,10 @@ import 'package:budget/database/tables.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
+import 'package:budget/struct/mbSync/mapeamento.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/meuBancoSync.dart';
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -170,6 +171,76 @@ void main() {
     expect(cliente.enviados, isEmpty);
     expect((await mbLerEspelho())['ajustes/t1']!.registro.deletedAt, isNull);
     expect((await _txs()).single.categoryFk, 'c1');
+  });
+
+  test('categoria apagada remotamente com transações fica e não ressuscita',
+      () async {
+    await _categoria('c1', 'Mercado');
+    await database.into(database.transactions).insert(
+        TransactionsCompanion.insert(
+            transactionPk: const Value('t1'),
+            name: 'Feira',
+            amount: -20,
+            note: '',
+            categoryFk: 'c1',
+            walletFk: const Value('0'),
+            dateCreated: Value(DateTime(2025, 1, 10)),
+            dateTimeModified: Value(DateTime.now())));
+    await sync();
+    final t = _futuro();
+    cliente.servidor.add(Registro('categorias', 'cashew:c1', null, t, t));
+    await sync();
+    expect(await database.getCategoryInstanceOrNull('c1'), isNotNull);
+    final e = (await mbLerEspelho())['categorias/cashew:c1']!;
+    expect(e.registro.deletedAt, isNotNull);
+    expect(e.projecao, isNull);
+    cliente.enviados.clear();
+    await sync();
+    expect(cliente.enviados.where((r) => r.tabela == 'categorias'), isEmpty);
+  });
+
+  test('orçamento arquivado não gera tombstone', () async {
+    await database.into(database.budgets).insert(BudgetsCompanion.insert(
+        budgetPk: const Value('b1'),
+        name: 'Casa',
+        amount: 500,
+        startDate: DateTime(2025, 1, 1),
+        endDate: DateTime(2025, 1, 31),
+        periodLength: 1,
+        order: 0,
+        dateTimeModified: Value(DateTime.now())));
+    await sync();
+    await (database.update(database.budgets)
+          ..where((b) => b.budgetPk.equals('b1')))
+        .write(BudgetsCompanion(
+            archived: const Value(true),
+            dateTimeModified: Value(DateTime.now().add(const Duration(seconds: 5)))));
+    cliente.enviados.clear();
+    await sync();
+    expect(cliente.enviados.where((r) => r.tabela == 'orcamentos'), isEmpty);
+    expect((await mbLerEspelho())['orcamentos/cashew:b1']!.registro.deletedAt,
+        isNull);
+  });
+
+  test('reverter categoria A->B->A emite ajuste com A', () async {
+    await _categoria('c1', 'Mercado');
+    cliente.extra = banco();
+    await sync();
+    final a = (await _txs()).single.categoryFk;
+    Future<void> muda(String cat, int s) =>
+        (database.update(database.transactions)
+              ..where((t) => t.transactionPk.equals('mb:t1')))
+            .write(TransactionsCompanion(
+                categoryFk: Value(cat),
+                dateTimeModified:
+                    Value(DateTime.now().add(Duration(seconds: s)))));
+    await muda('c1', 5);
+    await sync();
+    cliente.enviados.clear();
+    await muda(a, 10);
+    await sync();
+    final aj = cliente.enviados.singleWhere((r) => r.tabela == 'ajustes');
+    expect(aj.dados!['categoria_id'], idDoPk(a));
   });
 
   test('apagar transação mb: gera gasto 0 e ela não volta no pull', () async {

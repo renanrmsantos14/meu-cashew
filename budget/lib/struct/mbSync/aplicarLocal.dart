@@ -47,25 +47,27 @@ Future<void> mbAplicarRegistros(
     for (final e in espelho.values) e.registro,
     ...vencedores,
   ]);
-  for (final r in vivos) {
-    Projetado? p;
-    final d = r.dados;
-    if (d != null) {
-      try {
-        p = await _aplicar(r, d, espelho, hoje);
-        if (p != null) p = mbReescreverIds(p, semPrefixo);
-      } catch (e) {
-        // Registro remoto inaplicável (dados fora do formato esperado): fica só no espelho.
-        p = null;
+  await database.transaction(() async {
+    for (final r in vivos) {
+      Projetado? p;
+      final d = r.dados;
+      if (d != null) {
+        try {
+          p = await _aplicar(r, d, espelho, hoje);
+          if (p != null) p = mbReescreverIds(p, semPrefixo);
+        } catch (e) {
+          // Registro remoto inaplicável (dados fora do formato esperado): fica só no espelho.
+          p = null;
+        }
       }
+      novos.add(Espelho(r, p?.dados, false, null));
     }
-    novos.add(Espelho(r, p?.dados, false, null));
-  }
-  for (final r in mortos) {
-    await _apagar(r);
-    novos.add(Espelho(r, null, false, null));
-  }
-  await mbGravarEspelho(novos);
+    for (final r in mortos) {
+      await _apagar(r);
+      novos.add(Espelho(r, null, false, null));
+    }
+    await mbGravarEspelho(novos);
+  });
 }
 
 Future<Projetado?> _aplicar(Registro r, Map<String, dynamic> d,
