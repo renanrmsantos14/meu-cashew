@@ -1,3 +1,4 @@
+import 'package:budget/pages/meuBancoPage.dart';
 import 'package:budget/colors.dart';
 import 'package:budget/database/tables.dart' hide AppSettings;
 import 'package:budget/pages/aboutPage.dart';
@@ -563,6 +564,14 @@ class SettingsPageContent extends StatelessWidget {
         ),
 
         SettingsHeader(title: "tools-and-extras".tr()),
+        SettingsContainerOpenPage(
+          openPage: MeuBancoPage(),
+          title: "Meu Banco",
+          description: "Sincronizar transações do Meu Banco",
+          icon: appStateSettings["outlinedIcons"]
+              ? Icons.sync_alt_outlined
+              : Icons.sync_alt_rounded,
+        ),
         // SettingsContainerOpenPage(
         //   openPage: AutoTransactionsPage(),
         //   title: "Auto Transactions",

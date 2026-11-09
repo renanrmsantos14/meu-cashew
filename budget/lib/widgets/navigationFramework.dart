@@ -1,3 +1,4 @@
+import 'package:budget/struct/meuBancoSync.dart';
 import 'package:animations/animations.dart';
 import 'package:budget/colors.dart';
 import 'package:budget/database/initializeDefaultDatabase.dart';
@@ -309,6 +310,7 @@ Future<bool> runAllCloudFunctions(BuildContext context,
   errorSigningInDuringCloud = false;
   try {
     loadingIndeterminateKey.currentState?.setVisibility(true);
+    await sincronizarMeuBanco(); // nunca lança; erro fica na tela "Meu Banco"
     await runForceSignIn(context);
     await syncData(context);
     if (appStateSettings["emailScanningPullToRefresh"] ||
