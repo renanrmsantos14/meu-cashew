@@ -51,7 +51,8 @@ Este fork (Meu Cashew) é distribuído por GitHub Releases, não pela Play Store
 
 - Primeira instalação: baixe o `.apk` mais recente em [Releases](https://github.com/renanrmsantos14/meu-cashew/releases/latest) e instale manualmente (permita "instalar apps desconhecidos" para o navegador/gerenciador de arquivos).
 - Depois disso o app avisa quando houver versão nova ao abrir, e há o botão "Procurar atualização" em Configurações > Meu Banco.
-- Publicar versão: `scripts/nova-versao.sh 5.4.4+418` e depois o `git push origin HEAD v5.4.4+418` que o script imprime. O GitHub Actions compila, assina e publica a Release.
+- Publicar versão: `scripts/nova-versao.sh` (incrementa PATCH e build; ou informe `5.4.4+418`) e depois o `git push origin HEAD v<versão>` que o script imprime. O GitHub Actions compila, assina e publica a Release.
+- Compilar localmente: `scripts/compilar.sh apk|apk-debug|web <destino>`; grava data/hora (America/Sao_Paulo) no build e o app mostra `vX.Y.Z · dd/mm/aaaa HH:mm` no canto de todas as telas.
 - Secrets necessários no repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 
 ## Features

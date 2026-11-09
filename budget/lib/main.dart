@@ -1,3 +1,4 @@
+import 'package:budget/widgets/editorial/versaoCanto.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/struct/mbSync/segundoPlano.dart';
 import 'package:budget/pages/accountsPage.dart';
@@ -30,12 +31,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:budget/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'firebase_options.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 // Requires hot restart when changed
@@ -53,14 +52,6 @@ void main() async {
             await rootBundle.loadString('assets/fonts/$f'));
       }
     });
-    // Fork sem google-services: falha do Firebase não pode derrubar o app.
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e) {
-      print("Firebase indisponível: " + e.toString());
-    }
     await EasyLocalization.ensureInitialized();
     sharedPreferences = await SharedPreferences.getInstance();
     database = await constructDb('db');
@@ -182,11 +173,10 @@ class App extends StatelessWidget {
         );
 
         if (kIsWeb) {
-          return FadeIn(
+          mainWidget = FadeIn(
               duration: Duration(milliseconds: 1000), child: mainWidget);
-        } else {
-          return mainWidget;
         }
+        return VersaoCanto(child: mainWidget);
       },
       // ),
     );
