@@ -1,5 +1,6 @@
 import 'package:budget/functions.dart';
 import 'package:budget/struct/editorial.dart';
+import 'package:budget/struct/temas.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,106 +20,7 @@ AppColors getAppColors(
     {required Brightness brightness,
     required ThemeData themeData,
     required Color accentColor}) {
-  Color lightDarkAccentHeavyLight = brightness == Brightness.light
-      ? appStateSettings["accentSystemColor"] == true &&
-              appStateSettings["materialYou"] &&
-              appStateSettings["batterySaver"] == false
-          ? lightenPastel(
-              themeData.colorScheme.primary,
-              amount: 0.96,
-            )
-          : appStateSettings["materialYou"]
-              ? (appStateSettings["batterySaver"]
-                  ? lightenPastel(accentColor, amount: 0.8)
-                  : lightenPastel(accentColor, amount: 0.92))
-              : (appStateSettings["batterySaver"]
-                  ? Color(0xFFF3F3F3)
-                  : Color(0xFFFFFFFF))
-      : appStateSettings["accentSystemColor"] == true &&
-              appStateSettings["materialYou"] &&
-              appStateSettings["batterySaver"] == false
-          ? darkenPastel(
-              themeData.colorScheme.primary,
-              amount: 0.85,
-            )
-          : appStateSettings["materialYou"]
-              ? darkenPastel(accentColor, amount: 0.8)
-              : Color(0xFF242424);
-  return brightness == Brightness.light
-      ? AppColors(
-          colors: {
-            "white": Colors.white,
-            "black": Colors.black,
-            "textLight": appStateSettings["increaseTextContrast"]
-                ? Colors.black.withOpacity(0.7)
-                : appStateSettings["materialYou"]
-                    ? Colors.black.withOpacity(0.4)
-                    : Color(0xFF888888),
-            "lightDarkAccent": appStateSettings["materialYou"]
-                ? lightenPastel(accentColor, amount: 0.6)
-                : Color(0xFFF7F7F7),
-            "lightDarkAccentHeavyLight": lightDarkAccentHeavyLight,
-            "canvasContainer": const Color(0xFFEBEBEB),
-            "lightDarkAccentHeavy": Color(0xFFEBEBEB),
-            "shadowColor": const Color(0x655A5A5A),
-            "shadowColorLight": const Color(0x2D5A5A5A),
-            "unPaidUpcoming": Color(0xFF58A4C2),
-            "unPaidOverdue": Color(0xFF6577E0),
-            "incomeAmount": Color(0xFF59A849),
-            "expenseAmount": Color(0xFFCA5A5A),
-            "warningOrange": Color(0xFFCA995A),
-            "starYellow": Color(0xFFFFD723),
-            "dividerColor": appStateSettings["materialYou"]
-                ? Color(0x0F000000)
-                : Color(0xFFF0F0F0),
-            "standardContainerColor": getPlatform() == PlatformOS.isIOS
-                ? themeData.colorScheme.background
-                : appStateSettings["materialYou"]
-                    ? lightenPastel(
-                        themeData.colorScheme.secondaryContainer,
-                        amount: 0.3,
-                      )
-                    : lightDarkAccentHeavyLight,
-          },
-        )
-      : AppColors(
-          colors: {
-            "white": Colors.black,
-            "black": Colors.white,
-            "textLight": appStateSettings["increaseTextContrast"]
-                ? Colors.white.withOpacity(0.65)
-                : appStateSettings["materialYou"]
-                    ? Colors.white.withOpacity(0.25)
-                    : Color(0xFF494949),
-            "lightDarkAccent": appStateSettings["materialYou"]
-                ? darkenPastel(accentColor, amount: 0.83)
-                : Color(0xFF161616),
-            "lightDarkAccentHeavyLight": lightDarkAccentHeavyLight,
-            "canvasContainer": const Color(0xFF242424),
-            "lightDarkAccentHeavy": const Color(0xFF444444),
-            "shadowColor": const Color(0x69BDBDBD),
-            "shadowColorLight": appStateSettings["materialYou"]
-                ? Colors.transparent
-                : Color(0x28747474),
-            "unPaidUpcoming": Color(0xFF7DB6CC),
-            "unPaidOverdue": Color(0xFF8395FF),
-            "incomeAmount": Color(0xFF62CA77),
-            "expenseAmount": Color(0xFFDA7272),
-            "warningOrange": Color(0xFFDA9C72),
-            "starYellow": Colors.yellow,
-            "dividerColor": appStateSettings["materialYou"]
-                ? Color(0x13FFFFFF)
-                : Color(0x6F363636),
-            "standardContainerColor": getPlatform() == PlatformOS.isIOS
-                ? themeData.colorScheme.background
-                : appStateSettings["materialYou"]
-                    ? darkenPastel(
-                        themeData.colorScheme.secondaryContainer,
-                        amount: 0.6,
-                      )
-                    : lightDarkAccentHeavyLight,
-          },
-        );
+  return coresCashew(temaAtivo(brightness));
 }
 
 // Ensure you specify a shade, otherwise type will be of MaterialColor which can't be compared
@@ -566,18 +468,15 @@ class CustomColorTheme extends StatelessWidget {
   Widget build(BuildContext context) {
     if (accentColor == null) return child;
 
+    final brightness = determineBrightnessTheme(context);
+    final cores = temaAtivo(brightness).cores;
     ColorScheme colorScheme = ColorScheme.fromSeed(
       seedColor: accentColor!,
-      brightness: determineBrightnessTheme(context),
-      background: determineBrightnessTheme(context) == Brightness.dark
-          ? (appStateSettings["forceFullDarkBackground"] == true
-              ? Colors.black
-              : appStateSettings["materialYou"]
-                  ? darkenPastel(accentColor!, amount: 0.92)
-                  : Colors.black)
-          : appStateSettings["materialYou"]
-              ? lightenPastel(accentColor!, amount: 0.91)
-              : Colors.white,
+      brightness: brightness,
+    ).copyWith(
+      surface: cores.bg,
+      onSurface: cores.tx,
+      surfaceContainerLowest: cores.surf,
     );
     return Theme(
       data: generateThemeDataWithExtension(
@@ -602,83 +501,19 @@ ThemeData generateThemeDataWithExtension(
     themeData: themeData,
   );
 
+  final editorial = themeData.extension<EditorialCores>();
+  // Preserva as extensões do tema pai (EditorialCores) e substitui AppColors.
   return themeData.copyWith(
-    extensions: <ThemeExtension<dynamic>>[colors],
+    extensions: <ThemeExtension<dynamic>>[
+      colors,
+      if (editorial != null) editorial,
+    ],
     appBarTheme: AppBarTheme(
       systemOverlayStyle: getSystemUiOverlayStyle(colors, brightness),
     ),
   );
 }
 
-ThemeData getLightTheme() {
-  if (appStateSettings["temaEditorial"] != false) {
-    return temaEditorial(Brightness.light);
-  }
-  Brightness brightness = Brightness.light;
-  ThemeData themeData = ThemeData(
-    // pageTransitionsTheme: PageTransitionsTheme(builders: {
-    //   // the page route animation is set in pushRoute() - functions.dart
-    //   TargetPlatform.android: appStateSettings["iOSNavigation"]
-    //       ? CupertinoPageTransitionsBuilder()
-    //       : ZoomPageTransitionsBuilder(),
-    //   TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-    // }),
-    fontFamily: appStateSettings["font"],
-    fontFamilyFallback: ['Inter'],
-    colorScheme: getColorScheme(brightness),
-    useMaterial3: true,
-    applyElevationOverlayColor: false,
-    typography: Typography.material2014(),
-    splashColor: getPlatform() == PlatformOS.isIOS
-        ? Colors.transparent
-        : appStateSettings["materialYou"]
-            ? darkenPastel(
-                    lightenPastel(
-                        getSettingConstants(appStateSettings)["accentColor"],
-                        amount: 0.8),
-                    amount: 0.2)
-                .withOpacity(0.5)
-            : null,
-  );
-  return generateThemeDataWithExtension(
-    themeData: themeData,
-    brightness: brightness,
-    accentColor: getSettingConstants(appStateSettings)["accentColor"],
-  );
-}
+ThemeData getLightTheme() => temaFlutter(temaAtivo(Brightness.light));
 
-ThemeData getDarkTheme() {
-  if (appStateSettings["temaEditorial"] != false) {
-    return temaEditorial(Brightness.dark);
-  }
-  Brightness brightness = Brightness.dark;
-  ThemeData themeData = ThemeData(
-    // pageTransitionsTheme: PageTransitionsTheme(builders: {
-    //   // the page route animation is set in pushRoute() - functions.dart
-    //   TargetPlatform.android: appStateSettings["iOSNavigation"]
-    //       ? CupertinoPageTransitionsBuilder()
-    //       : ZoomPageTransitionsBuilder(),
-    //   TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-    // }),
-    fontFamily: appStateSettings["font"],
-    fontFamilyFallback: ['Inter'],
-    colorScheme: getColorScheme(brightness),
-    useMaterial3: true,
-    typography: Typography.material2014(),
-    splashColor: getPlatform() == PlatformOS.isIOS
-        ? Colors.transparent
-        : appStateSettings["materialYou"]
-            ? darkenPastel(
-                    lightenPastel(
-                        getSettingConstants(appStateSettings)["accentColor"],
-                        amount: 0.86),
-                    amount: 0.1)
-                .withOpacity(0.2)
-            : null,
-  );
-  return generateThemeDataWithExtension(
-    themeData: themeData,
-    brightness: brightness,
-    accentColor: getSettingConstants(appStateSettings)["accentColor"],
-  );
-}
+ThemeData getDarkTheme() => temaFlutter(temaAtivo(Brightness.dark));
