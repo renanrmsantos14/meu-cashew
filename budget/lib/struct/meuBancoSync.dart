@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:budget/database/tables.dart';
 import 'package:budget/struct/databaseGlobal.dart';
+import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:flutter/foundation.dart';
@@ -67,7 +68,7 @@ Future<bool> sincronizarMeuBanco() async {
   try {
     final base = await meuBancoLerUrl();
     final desde = appStateSettings[_chaveDesde];
-    final uri = Uri.parse(base + "/api/app/transacoes").replace(
+    final uri = Uri.parse(base + "/api/sync").replace(
         queryParameters: desde is String && desde.isNotEmpty
             ? {"desde": desde}
             : null);
@@ -89,7 +90,10 @@ Future<bool> sincronizarMeuBanco() async {
       throw "O Meu Banco respondeu com erro ${resp.statusCode}.";
     }
     final resultado =
-        mbMapearResposta(json.decode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>);
+        mbMapearPull(
+            json.decode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>,
+            MbContextoCategoria.deRegistros(const []),
+            pkCategoria: (_, nome, receita) => mbPkCategoria(nome, receita));
     await _aplicar(resultado);
     if (resultado.agora.isNotEmpty) {
       await updateSettings(_chaveDesde, resultado.agora,

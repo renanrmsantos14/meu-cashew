@@ -1,6 +1,8 @@
 // Mapeamento puro (sem Flutter/Drift) da resposta do Meu Banco para dados do Cashew.
 // Espelha public/regras.js do painel do Meu Banco (CATEGORIAS, traduzir, naoEhGasto, valorGasto).
 
+import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
+
 const String mbPrefixo = "mb:";
 
 const Map<String, String> mbCategorias = {
@@ -190,10 +192,27 @@ class MbResultado {
   final List<MbTransacao> transacoes;
   // pks ("mb:" + id) das pendentes atuais
   final Set<String> pendentesPks;
-  // futuras e fora-de-gasto que não foram importadas
+  // futuras, ajustadas para fora e fora-de-gasto que não foram importadas
   final int ignoradas;
+  final List<Map<String, dynamic>> contasBrutas;
+  final Map<String, dynamic> faturas;
+  final Map<String, dynamic>? ciclo;
+  final List<dynamic> avisos;
+  final Map<String, dynamic> config;
+  final String? sincronizadoEm;
   const MbResultado(
-      this.agora, this.contas, this.transacoes, this.pendentesPks, this.ignoradas);
+    this.agora,
+    this.contas,
+    this.transacoes,
+    this.pendentesPks,
+    this.ignoradas, {
+    this.contasBrutas = const [],
+    this.faturas = const {},
+    this.ciclo,
+    this.avisos = const [],
+    this.config = const {},
+    this.sincronizadoEm,
+  });
 }
 
 String mbPkTransacao(String id) => mbPrefixo + id;
@@ -209,31 +228,45 @@ DateTime _parseData(String? s) {
       int.parse(p.group(1)!), int.parse(p.group(2)!), int.parse(p.group(3)!), 12);
 }
 
-MbResultado mbMapearResposta(Map<String, dynamic> json) {
+Map<String, dynamic> _mapa(Object? v) =>
+    v is Map ? v.cast<String, dynamic>() : <String, dynamic>{};
+
+MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
+    {required String Function(String? catId, String nomeTraduzido, bool receita)
+        pkCategoria}) {
   final contas = <MbConta>[];
+  final brutas = <Map<String, dynamic>>[];
   final cartoes = <String, bool>{};
   for (final c in (json["contas"] as List? ?? const [])) {
     final id = c["id"].toString();
-    final cartao = c["tipo"] == "CREDIT";
+    final cartao = c["type"] == "CREDIT";
     cartoes[id] = cartao;
-    contas.add(MbConta(mbPkConta(id), (c["nome"] ?? id).toString(), cartao,
+    brutas.add(_mapa(c));
+    contas.add(MbConta(mbPkConta(id), (c["name"] ?? id).toString(), cartao,
         moeda: "brl"));
   }
   final transacoes = <MbTransacao>[];
   int ignoradas = 0;
   for (final t in (json["transacoes"] as List? ?? const [])) {
-    if (t["futura"] == true) {
+    final id = t["id"].toString();
+    if (t["scheduled"] == 1 || t["scheduled"] == true) {
       ignoradas++;
       continue;
     }
-    final categoria = t["categoria"] as String?;
-    final descricao = (t["descricao"] ?? t["estabelecimento"] ?? "").toString();
-    if (mbNaoEhGasto(categoria, descricao)) {
+    final gasto = ctx.ajustes[id]?["gasto"];
+    if (gasto == 0) {
       ignoradas++;
       continue;
     }
-    final bruto = (t["valor"] as num).toDouble();
-    final cartao = cartoes[t["conta_id"]] ?? false;
+    final categoria = t["category"] as String?;
+    final descricao = (t["description"] ?? t["merchant"] ?? "").toString();
+    if (gasto != 1 && mbNaoEhGasto(categoria, descricao)) {
+      ignoradas++;
+      continue;
+    }
+    final bruto = (t["amount"] as num).toDouble();
+    final contaId = t["account_id"].toString();
+    final cartao = cartoes[contaId] ?? false;
     // Cartão: compra positiva vira despesa (negativa), estorno vira receita. Conta: o sinal já é o do Cashew.
     final valor = cartao ? -bruto : bruto;
     if (valor == 0) {
@@ -241,26 +274,44 @@ MbResultado mbMapearResposta(Map<String, dynamic> json) {
       continue;
     }
     final receita = valor > 0;
-    final nomeCategoria = mbTraduzirCategoria(categoria);
+    final ef = mbCategoriaEfetiva(
+        txId: id,
+        contaId: contaId,
+        descricao: descricao,
+        categoriaPluggy: categoria,
+        receita: receita,
+        ctx: ctx);
+    final nomeCategoria = mbTraduzirCategoria(ef.category ?? categoria);
     final pendente = t["status"] == "PENDING";
     final nome = descricao.trim().isEmpty ? "Sem descrição" : descricao.trim();
     transacoes.add(MbTransacao(
-      pk: mbPkTransacao(t["id"].toString()),
+      pk: mbPkTransacao(id),
       nome: nome,
       valor: valor,
       receita: receita,
       nota: pendente ? "Pendente" : "",
-      data: _parseData(t["data"] as String?),
-      carteiraPk: mbPkConta(t["conta_id"].toString()),
+      data: _parseData(t["date"] as String?),
+      carteiraPk: mbPkConta(contaId),
       categoriaNome: nomeCategoria,
-      categoriaPk: mbPkCategoria(nomeCategoria, receita),
+      categoriaPk: pkCategoria(ef.categoriaId, nomeCategoria, receita),
       pendente: pendente,
     ));
   }
   final pendentes = <String>{
-    for (final id in (json["ids_pendentes"] as List? ?? const []))
+    for (final id in (json["pendentes"] as List? ?? const []))
       mbPkTransacao(id.toString())
   };
   return MbResultado(
-      (json["agora"] ?? "").toString(), contas, transacoes, pendentes, ignoradas);
+    (json["agora"] ?? "").toString(),
+    contas,
+    transacoes,
+    pendentes,
+    ignoradas,
+    contasBrutas: brutas,
+    faturas: _mapa(json["faturas"]),
+    ciclo: json["ciclo"] is Map ? _mapa(json["ciclo"]) : null,
+    avisos: (json["avisos"] as List?) ?? const [],
+    config: _mapa(json["config"]),
+    sincronizadoEm: json["sincronizado_em"] as String?,
+  );
 }

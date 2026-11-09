@@ -1,0 +1,426 @@
+[
+  {
+    "nome": "ajuste com categoria_id vence tudo",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "ajustes",
+        "id": "t1",
+        "dados": {
+          "categoria_id": "cx"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "COMPRA*",
+          "categoria_id": "cr"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "categorias",
+        "id": "cf",
+        "dados": {
+          "nome": "Farmácia",
+          "tipo": "despesa"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "ajuste",
+      "categoria_id": "cx"
+    }
+  },
+  {
+    "nome": "ajuste só com category usa o mapeamento pluggy",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "ajustes",
+        "id": "t1",
+        "dados": {
+          "category": "Groceries"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "categorias",
+        "id": "cs",
+        "dados": {
+          "nome": "Mercado",
+          "tipo": "despesa",
+          "pluggy": [
+            "Groceries"
+          ]
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "ajuste",
+      "categoria_id": "cs"
+    }
+  },
+  {
+    "nome": "regra vence o pluggy",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "COMPRA DROGASIL",
+          "categoria_id": "cr"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "categorias",
+        "id": "cf",
+        "dados": {
+          "nome": "Farmácia",
+          "tipo": "despesa",
+          "pluggy": [
+            "Pharmacy"
+          ]
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "regra",
+      "categoria_id": "cr"
+    }
+  },
+  {
+    "nome": "duas regras: prioridade e depois tamanho do padrão",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "COMPRA DROGASIL",
+          "categoria_id": "longa"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "regras",
+        "id": "r2",
+        "dados": {
+          "padrao": "COMPRA*",
+          "categoria_id": "prio",
+          "prioridade": 5
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "regras",
+        "id": "r3",
+        "dados": {
+          "padrao": "COMPRA*",
+          "categoria_id": "curta"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "regra",
+      "categoria_id": "prio"
+    }
+  },
+  {
+    "nome": "regra com prioridade igual: padrão mais longo vence",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "COMPRA*",
+          "categoria_id": "curta"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "regras",
+        "id": "r2",
+        "dados": {
+          "padrao": "COMPRA DROGASIL",
+          "categoria_id": "longa"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "regra",
+      "categoria_id": "longa"
+    }
+  },
+  {
+    "nome": "regra de outra conta é ignorada",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "COMPRA*",
+          "categoria_id": "cr",
+          "conta_id": "outra"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "categorias",
+        "id": "cf",
+        "dados": {
+          "nome": "Farmácia",
+          "tipo": "despesa"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "nome",
+      "categoria_id": "cf"
+    }
+  },
+  {
+    "nome": "curinga no meio do padrão",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "DRO FARMA SIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "DRO*SIL",
+          "categoria_id": "cr"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "regra",
+      "categoria_id": "cr"
+    }
+  },
+  {
+    "nome": "padrão sem diferença de maiúsculas",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "Compra Drogasil",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "compra DROGASIL",
+          "categoria_id": "cr"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "regra",
+      "categoria_id": "cr"
+    }
+  },
+  {
+    "nome": "mapeamento pluggy da categoria",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "MERCADO X",
+      "category": "Groceries"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "categorias",
+        "id": "cs",
+        "dados": {
+          "nome": "Compras do mês",
+          "tipo": "despesa",
+          "pluggy": [
+            "Groceries"
+          ]
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "pluggy",
+      "categoria_id": "cs"
+    }
+  },
+  {
+    "nome": "por nome traduzido (Pharmacy vira farmácia)",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "categorias",
+        "id": "cf",
+        "dados": {
+          "nome": "Farmácia",
+          "tipo": "despesa"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "nome",
+      "categoria_id": "cf"
+    }
+  },
+  {
+    "nome": "receita não casa com categoria de despesa de mesmo nome",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "ESTORNO",
+      "category": "Groceries"
+    },
+    "receita": true,
+    "registros": [
+      {
+        "tabela": "categorias",
+        "id": "cd",
+        "dados": {
+          "nome": "Supermercado",
+          "tipo": "despesa"
+        },
+        "deleted_at": null
+      },
+      {
+        "tabela": "categorias",
+        "id": "cr",
+        "dados": {
+          "nome": "Supermercado",
+          "tipo": "receita"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "nome",
+      "categoria_id": "cr"
+    }
+  },
+  {
+    "nome": "registro excluído é ignorado",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "COMPRA DROGASIL",
+      "category": "Pharmacy"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "regras",
+        "id": "r1",
+        "dados": {
+          "padrao": "COMPRA*",
+          "categoria_id": "cr"
+        },
+        "deleted_at": "2026-11-01T00:00:00.000Z"
+      },
+      {
+        "tabela": "categorias",
+        "id": "cf",
+        "dados": {
+          "nome": "Farmácia",
+          "tipo": "despesa"
+        },
+        "deleted_at": "2026-11-01T00:00:00.000Z"
+      }
+    ],
+    "esperado": {
+      "fonte": "banco",
+      "categoria_id": null
+    }
+  },
+  {
+    "nome": "nada casa: mantém a categoria do banco",
+    "tx": {
+      "id": "t1",
+      "account_id": "cc",
+      "description": "XYZ",
+      "category": "Unknown"
+    },
+    "receita": false,
+    "registros": [
+      {
+        "tabela": "categorias",
+        "id": "cf",
+        "dados": {
+          "nome": "Farmácia",
+          "tipo": "despesa"
+        },
+        "deleted_at": null
+      }
+    ],
+    "esperado": {
+      "fonte": "banco",
+      "categoria_id": null
+    }
+  }
+]
