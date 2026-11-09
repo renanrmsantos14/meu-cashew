@@ -270,3 +270,17 @@ Note: required Firebase.
 ### Long Term Loans
 
 - Long term loans create a goal. However, the goals total is not used. Instead the total of the goal is calculated by totalling the proper polarity of transactions of the opposite type. For example, if it was a loan of 100$ lent out, the initial transaction would be 100$ of negative polarity (expense) and that would be the total of the goal. When a payment is made, it is made in the opposite (positive) polarity (income) and added to the total 'paid back'. We can easily find how much is remaining by taking the difference (or the addition including polarities).
+
+
+## Meu Cashew (fork com sincronização do Meu Banco)
+
+Este repositório é um fork GPL-3.0 do [Cashew](https://github.com/jameskokoska/Cashew), mantido sob a mesma licença. As mudanças: id de aplicativo `br.renan.meucashew` (instala ao lado do Cashew original), sem Firebase/google-services e sincronização das transações do Meu Banco.
+
+Como configurar a sincronização:
+1. No painel do Meu Banco, gere um token de app (`mb_...`).
+2. No app: Configurações > Meu Banco. Confira o endereço, cole o token e toque em "Sincronizar agora".
+3. Depois disso a sincronização roda ao abrir o app e ao puxar a tela para atualizar.
+
+O token fica no armazenamento seguro do aparelho (fora dos backups do Cashew). "Desconectar" apaga o token e o ponto de sincronização, sem apagar as transações importadas. Futuras parcelas, pagamentos de fatura, investimentos e transferências entre contas próprias não são importados.
+
+Build release assinado: crie `budget/android/key.properties` (ignorado pelo git) com `externalFile=/caminho/do/key.properties` ou com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`.

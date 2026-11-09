@@ -26,9 +26,15 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 def keystoreProperties = new Properties()
+// android/key.properties (fora do git) pode ter só "externalFile=/caminho/key.properties"
+// apontando para o arquivo real com storeFile, storePassword, keyAlias e keyPassword.
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    if (keystoreProperties['externalFile']) {
+        def external = new File(keystoreProperties['externalFile'])
+        keystoreProperties.load(new FileInputStream(external))
+    }
 }
 
 android {

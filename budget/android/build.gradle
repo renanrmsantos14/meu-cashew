@@ -22,6 +22,14 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
+    // Plugins antigos compilam com SDK < 31 e falham em 'android:attr/lStar' no release.
+    afterEvaluate { p ->
+        if (p.name != 'app' && p.hasProperty('android')) {
+            p.android {
+                compileSdkVersion 34
+            }
+        }
+    }
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     project.evaluationDependsOn(':app')
 }
