@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mb_raiz"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/mb_fundo"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Disponível agora"
+        android:textColor="@color/mb_mu"
+        android:textSize="11.5sp" />
+
+    <TextView
+        android:id="@+id/mb_disponivel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-light"
+        android:text="R$ 0,00"
+        android:textColor="@color/mb_tx"
+        android:textSize="28sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Gasto no ciclo"
+        android:textColor="@color/mb_mu"
+        android:textSize="11.5sp" />
+
+    <TextView
+        android:id="@+id/mb_gasto"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/mb_tx"
+        android:textSize="12sp" />
+
+    <ProgressBar
+        android:id="@+id/mb_medidor"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_marginTop="4dp"
+        android:max="100"
+        android:progressDrawable="@drawable/mb_medidor" />
+
+    <ProgressBar
+        android:id="@+id/mb_medidor_alerta"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_marginTop="-2dp"
+        android:max="100"
+        android:progressDrawable="@drawable/mb_medidor_warn"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/mb_sinc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/mb_mu"
+        android:textSize="10.5sp" />
+</LinearLayout>

@@ -123,6 +123,13 @@
             <meta-data android:name="android.appwidget.provider"
                 android:resource="@xml/net_worth_plus_widget" />
         </receiver>
+        <receiver android:name="MeuBancoWidgetProvider" android:exported="false" android:label="Meu Banco">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/meu_banco_widget" />
+        </receiver>
         <receiver android:name="NetWorthWidgetProvider"
             android:exported="true" android:label="Net Total">
             <intent-filter>
