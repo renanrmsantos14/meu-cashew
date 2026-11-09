@@ -1,5 +1,7 @@
 import 'package:budget/pages/meuBancoPage.dart';
 import 'package:budget/colors.dart';
+import 'package:budget/pages/aparenciaPage.dart';
+import 'package:budget/struct/temas.dart';
 import 'package:budget/database/tables.dart' hide AppSettings;
 import 'package:budget/pages/aboutPage.dart';
 import 'package:budget/pages/addTransactionPage.dart';
@@ -41,7 +43,6 @@ import 'package:budget/widgets/radioItems.dart';
 import 'package:budget/widgets/ratingPopup.dart';
 import 'package:budget/widgets/restartApp.dart';
 import 'package:budget/widgets/selectAmount.dart';
-import 'package:budget/widgets/selectColor.dart';
 import 'package:budget/widgets/settingsContainers.dart';
 import 'package:budget/pages/walletDetailsPage.dart';
 import 'package:budget/struct/initializeBiometrics.dart';
@@ -434,79 +435,17 @@ class SettingsPageContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingsHeader(title: "theme".tr()),
-        Builder(
-          builder: (context) {
-            late Color? selectedColor =
-                HexColor(appStateSettings["accentColor"]);
-
-            return SettingsContainer(
-              onTap: () {
-                openBottomSheet(
-                  context,
-                  useParentContextForTheme: false,
-                  PopupFramework(
-                    title: "select-color".tr(),
-                    child: Column(
-                      children: [
-                        getPlatform() == PlatformOS.isIOS
-                            ? Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                    bottom: 8.0),
-                                child: SettingsContainerSwitch(
-                                  title: "colorful-interface".tr(),
-                                  onSwitched: (value) {
-                                    updateSettings("materialYou", value,
-                                        updateGlobalState: true);
-                                  },
-                                  initialValue: appStateSettings["materialYou"],
-                                  icon: appStateSettings["outlinedIcons"]
-                                      ? Icons.brush_outlined
-                                      : Icons.brush_rounded,
-                                  enableBorderRadius: true,
-                                ),
-                              )
-                            : SizedBox.shrink(),
-                        SelectColor(
-                          selectableColorsList: selectableAccentColors(context),
-                          includeThemeColor: false,
-                          selectedColor: selectedColor,
-                          setSelectedColor: (color) {
-                            selectedColor = color;
-                            updateSettings("accentColor", toHexString(color),
-                                updateGlobalState: true);
-                            updateSettings("accentSystemColor", false,
-                                updateGlobalState: true);
-                            updateWidgetColorsAndText(context);
-                          },
-                          useSystemColorPrompt: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-              title: "accent-color".tr(),
-              description: "accent-color-description".tr(),
-              icon: appStateSettings["outlinedIcons"]
-                  ? Icons.color_lens_outlined
-                  : Icons.color_lens_rounded,
-            );
-          },
+        SettingsContainerOpenPage(
+          openPage: const AparenciaPage(),
+          title: "Aparência",
+          description: temaPorId(appStateSettings["temaPronto"] is String
+                  ? appStateSettings["temaPronto"]
+                  : "sistema")
+              .nome,
+          icon: appStateSettings["outlinedIcons"]
+              ? Icons.palette_outlined
+              : Icons.palette_rounded,
         ),
-        getPlatform() == PlatformOS.isIOS
-            ? SizedBox.shrink()
-            : SettingsContainerSwitch(
-                title: "material-you".tr(),
-                description: "material-you-description".tr(),
-                onSwitched: (value) {
-                  updateSettings("materialYou", value, updateGlobalState: true);
-                },
-                initialValue: appStateSettings["materialYou"],
-                icon: appStateSettings["outlinedIcons"]
-                    ? Icons.brush_outlined
-                    : Icons.brush_rounded,
-              ),
-        ThemeSettingsDropdown(),
 
         // EnterName(),
         SettingsHeader(title: "preferences".tr()),
@@ -632,60 +571,6 @@ class SettingsPageContent extends StatelessWidget {
           forceButtonName: "google-drive".tr(),
         ),
       ],
-    );
-  }
-}
-
-class ThemeSettingsDropdown extends StatefulWidget {
-  const ThemeSettingsDropdown({super.key});
-
-  @override
-  State<ThemeSettingsDropdown> createState() => _ThemeSettingsDropdownState();
-}
-
-class _ThemeSettingsDropdownState extends State<ThemeSettingsDropdown> {
-  @override
-  Widget build(BuildContext context) {
-    return SettingsContainerDropdown(
-      key: ValueKey(appStateSettings["materialYou"].toString()),
-      title: "theme-mode".tr(),
-      icon: Theme.of(context).brightness == Brightness.light
-          ? appStateSettings["outlinedIcons"]
-              ? Icons.lightbulb_outlined
-              : Icons.lightbulb_rounded
-          : appStateSettings["outlinedIcons"]
-              ? Icons.dark_mode_outlined
-              : Icons.dark_mode_rounded,
-      initial: appStateSettings["theme"].toString() == "black" &&
-              appStateSettings["materialYou"] == false
-          ? "dark"
-          : appStateSettings["theme"].toString(),
-      items: [
-        "system",
-        "light",
-        "dark",
-        if (appStateSettings["materialYou"] == true) "black"
-      ],
-      faintValues: [
-        if (appStateSettings["materialYou"] == true &&
-            appStateSettings["theme"].toString() == "system")
-          appStateSettings["forceFullDarkBackground"] == true ? "dark" : "black"
-      ],
-      onChanged: (value) async {
-        if (value == "black") {
-          await updateSettings("forceFullDarkBackground", true,
-              updateGlobalState: false);
-        } else if (value == "dark") {
-          await updateSettings("forceFullDarkBackground", false,
-              updateGlobalState: false);
-        }
-        setState(() {});
-        await updateSettings("theme", value, updateGlobalState: true);
-        updateWidgetColorsAndText(context);
-      },
-      getLabel: (item) {
-        return item.tr();
-      },
     );
   }
 }
