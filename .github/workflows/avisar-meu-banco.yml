@@ -1,0 +1,21 @@
+name: Publicar web no Meu Banco
+
+# A cada push no main, pede ao repo meu-banco que recompile o web e publique o Worker.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'budget/**'
+      - 'scripts/compilar.sh'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar deploy no meu-banco
+        env:
+          GH_TOKEN: ${{ secrets.MEU_BANCO_DISPATCH_TOKEN }}
+        run: gh api repos/renanrmsantos14/meu-banco/dispatches -f event_type=cashew-main
