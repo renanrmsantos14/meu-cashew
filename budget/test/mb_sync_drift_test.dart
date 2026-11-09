@@ -13,6 +13,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:sqlite3/open.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ClienteFalso extends MbCliente {
   ClienteFalso() : super(base: 'https://teste');
@@ -62,7 +63,9 @@ void main() {
   });
 
   setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
     database = FinanceDatabase(NativeDatabase.memory());
+    SharedPreferences.setMockInitialValues({'mbNotifCursor': 'x'});
     cliente = ClienteFalso();
     meuBancoSincronizando.value = false;
   });
@@ -305,5 +308,6 @@ void main() {
     cliente.extra = {};
     await sync();
     expect(cliente.enviados.where((r) => r.id == 'cashew:c1'), isNotEmpty);
+    expect((await SharedPreferences.getInstance()).getString('mbNotifCursor'), isNull);
   });
 }

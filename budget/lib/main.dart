@@ -60,7 +60,13 @@ void main() async {
     await loadCurrencyJSON();
     await loadLanguageNamesJSON();
     await initializeSettings();
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) await mbRegistrarSegundoPlano();
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await mbRegistrarSegundoPlano();
+      } catch (e) {
+        if (kDebugMode) debugPrint('Segundo plano indisponível: $e');
+      }
+    }
     tz.initializeTimeZones();
     final String? locationName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(locationName ?? "America/New_York"));

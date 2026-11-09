@@ -1,5 +1,6 @@
 import 'package:budget/struct/settings.dart';
 import 'package:budget/struct/editorial.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 const String mbCompilado =
@@ -15,28 +16,30 @@ class VersaoCanto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 1100) return child;
+    final lateralMostraVersao =
+        kIsWeb && MediaQuery.sizeOf(context).width >= 1100;
     return Stack(
       textDirection: TextDirection.ltr,
       children: [
         child,
-        Positioned(
-          top: MediaQuery.paddingOf(context).top + 4,
-          right: 10,
-          child: IgnorePointer(
-            child: ExcludeSemantics(
-              child: Text(
-                textoVersao(packageInfoGlobal?.version ?? '?', mbCompilado),
-                textDirection: TextDirection.ltr,
-                style: EdTexto.mono(context).copyWith(
-                  color: cores(context).mu.withOpacity(.7),
-                  fontSize: 10,
-                  decoration: TextDecoration.none,
+        if (!lateralMostraVersao)
+          Positioned(
+            bottom: MediaQuery.paddingOf(context).bottom + 4,
+            right: 10,
+            child: IgnorePointer(
+              child: ExcludeSemantics(
+                child: Text(
+                  textoVersao(packageInfoGlobal?.version ?? '?', mbCompilado),
+                  textDirection: TextDirection.ltr,
+                  style: EdTexto.mono(context).copyWith(
+                    color: cores(context).mu.withOpacity(.7),
+                    fontSize: 10,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

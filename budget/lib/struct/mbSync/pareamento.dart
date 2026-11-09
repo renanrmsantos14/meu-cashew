@@ -8,6 +8,7 @@ import 'package:budget/struct/meuBancoMapping.dart';
 import 'package:budget/widgets/navigationFramework.dart';
 import 'package:budget/widgets/openPopup.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart' show BuildContext, Icons;
 
 class MbPareamento {
@@ -42,6 +43,7 @@ MbPareamento? mbLerLinkPareamento(Uri uri) {
 // Conta nova: apaga o espelho, a fila, o estado e o que foi importado da conta anterior.
 // O que nasceu no Cashew fica e é reenviado como novo, porque o espelho está vazio.
 Future<void> mbTrocarConta() async {
+  (await SharedPreferences.getInstance()).remove('mbNotifCursor');
   await mbCriarTabelas();
   await database.transaction(() async {
     await database.customStatement('DELETE FROM mb_registros');

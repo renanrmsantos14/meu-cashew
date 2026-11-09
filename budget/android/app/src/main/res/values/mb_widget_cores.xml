@@ -3,7 +3,7 @@
     <color name="mb_bg">#F7F6F3</color>
     <color name="mb_tx">#17181C</color>
     <color name="mb_mu">#77767A</color>
-    <color name="mb_line">#14141E14</color>
+    <color name="mb_line">#1414141E</color>
     <color name="mb_acc">#2340D8</color>
     <color name="mb_warn">#B42318</color>
 </resources>
