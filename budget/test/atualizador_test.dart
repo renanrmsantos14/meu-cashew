@@ -16,4 +16,21 @@ void main() {
     expect(atualizadorTagEhMaisNova('v5.4.3+1000', 999), isTrue);
     expect(atualizadorTagEhMaisNova('invalida', 1), isFalse);
   });
+
+  test('só aceita APK das Releases do repositório via https', () {
+    const base =
+        'https://github.com/renanrmsantos14/meu-cashew/releases/download/';
+    expect(atualizadorUrlConfiavel('${base}v5.4.3+417/app.apk'), isTrue);
+    expect(
+        atualizadorUrlConfiavel(
+            'http://github.com/renanrmsantos14/meu-cashew/releases/download/v1/a.apk'),
+        isFalse);
+    expect(
+        atualizadorUrlConfiavel('https://github.com.evil.com/x.apk'), isFalse);
+    expect(
+        atualizadorUrlConfiavel(
+            'https://github.com/outro/meu-cashew/releases/download/v1/a.apk'),
+        isFalse);
+    expect(atualizadorUrlConfiavel('${base}../../../evil/a.apk'), isFalse);
+  });
 }

@@ -12,6 +12,10 @@ import 'package:path_provider/path_provider.dart';
 
 const String atualizadorUrlLatest =
     "https://api.github.com/repos/renanrmsantos14/meu-cashew/releases/latest";
+// Único prefixo aceito para baixar o APK (o GitHub redireciona para o CDN; o redirect é seguido pelo http).
+const String _prefixoDownload =
+    "https://github.com/renanrmsantos14/meu-cashew/releases/download/";
+const int _tamanhoMaximoApk = 300 * 1024 * 1024;
 const String _chaveOferta = "atualizacaoOfertada";
 
 /// Resultado de procurar atualização. [versao] é a versão da tag (ex. "5.4.3").
@@ -44,6 +48,12 @@ bool atualizadorTagEhMaisNova(String tag, int buildAtual) {
   return build != null && build > buildAtual;
 }
 
+/// True só para APKs hospedados nas Releases deste repositório, via https.
+bool atualizadorUrlConfiavel(String url) {
+  final uri = Uri.tryParse(url)?.normalizePath();
+  return uri != null && uri.toString().startsWith(_prefixoDownload);
+}
+
 /// Consulta a última Release. Retorna null se não há versão mais nova.
 /// Lança exceção em falha de rede/formato (quem chama decide se mostra).
 Future<AtualizacaoDisponivel?> atualizadorProcurar() async {
@@ -62,11 +72,19 @@ Future<AtualizacaoDisponivel?> atualizadorProcurar() async {
       (a) => (a["name"] ?? "").toString().toLowerCase().endsWith(".apk"),
       orElse: () => {});
   if (apk.isEmpty) throw Exception("Release sem arquivo .apk");
+  final url = apk["browser_download_url"].toString();
+  final tamanho = (apk["size"] as num).toInt();
+  if (!atualizadorUrlConfiavel(url)) {
+    throw Exception("Release com endereço de download não confiável");
+  }
+  if (tamanho <= 0 || tamanho > _tamanhoMaximoApk) {
+    throw Exception("Release com tamanho de APK inválido ($tamanho bytes)");
+  }
   return AtualizacaoDisponivel(
     versao: atualizadorVersaoDaTag(tag),
     build: atualizadorBuildDaTag(tag)!,
-    urlApk: apk["browser_download_url"].toString(),
-    tamanhoApk: (apk["size"] as num).toInt(),
+    urlApk: url,
+    tamanhoApk: tamanho,
   );
 }
 
@@ -134,7 +152,8 @@ Future<void> atualizadorBaixarEInstalar(
       title: Text("Baixando ${nova.versao}"),
       content: ValueListenableBuilder<double?>(
         valueListenable: progresso,
-        builder: (_, p, __) => Column(mainAxisSize: MainAxisSize.min, children: [
+        builder: (_, p, __) =>
+            Column(mainAxisSize: MainAxisSize.min, children: [
           LinearProgressIndicator(value: p),
           const SizedBox(height: 10),
           Text(p == null ? "" : "${(p * 100).round()}%"),
@@ -145,6 +164,9 @@ Future<void> atualizadorBaixarEInstalar(
   String? erro;
   File? arquivo;
   try {
+    if (!atualizadorUrlConfiavel(nova.urlApk)) {
+      throw Exception("endereço de download não confiável");
+    }
     final dir = await getTemporaryDirectory();
     arquivo = File("${dir.path}/meu-cashew-${nova.versao}.apk");
     if (await arquivo.exists()) await arquivo.delete();
@@ -159,9 +181,11 @@ Future<void> atualizadorBaixarEInstalar(
       final sink = arquivo.openWrite();
       try {
         await for (final parte in resp.stream) {
-          sink.add(parte);
           baixado += parte.length;
-          progresso.value = total > 0 ? (baixado / total).clamp(0.0, 1.0) : null;
+          if (baixado > total) throw Exception("arquivo maior que o esperado");
+          sink.add(parte);
+          progresso.value =
+              total > 0 ? (baixado / total).clamp(0.0, 1.0) : null;
         }
       } finally {
         await sink.close();
@@ -177,6 +201,11 @@ Future<void> atualizadorBaixarEInstalar(
     }
   } catch (e) {
     erro = e.toString();
+    try {
+      if (arquivo != null && await arquivo.exists()) await arquivo.delete();
+    } catch (e) {
+      debugPrint("Atualizador: não apagou APK parcial: $e");
+    }
   }
   navigator.pop();
   if (erro != null || arquivo == null) {

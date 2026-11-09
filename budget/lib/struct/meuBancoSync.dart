@@ -25,6 +25,7 @@ Future<String?> meuBancoLerToken() async {
   try {
     return await _storage.read(key: _chaveToken);
   } catch (e) {
+    debugPrint("Meu Banco: falha ao ler o token do armazenamento seguro: $e");
     return null;
   }
 }
@@ -33,7 +34,9 @@ Future<String> meuBancoLerUrl() async {
   try {
     final u = await _storage.read(key: _chaveUrl);
     if (u != null && u.trim().isNotEmpty) return u.trim();
-  } catch (e) {}
+  } catch (e) {
+    debugPrint("Meu Banco: falha ao ler a URL do armazenamento seguro: $e");
+  }
   return meuBancoUrlPadrao;
 }
 
@@ -68,6 +71,10 @@ Future<bool> sincronizarMeuBanco() async {
         queryParameters: desde is String && desde.isNotEmpty
             ? {"desde": desde}
             : null);
+    // O token nunca sai por conexão sem criptografia.
+    if (uri.scheme != "https") {
+      throw "O endereço do Meu Banco precisa começar com https://";
+    }
     final resp = await http.get(uri, headers: {
       "Authorization": "Bearer " + token,
       "Accept": "application/json",
