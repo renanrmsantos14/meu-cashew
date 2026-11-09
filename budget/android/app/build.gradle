@@ -88,6 +88,11 @@ flutter {
     source '../..'
 }
 
+// work-runtime 2.8 (workmanager) já inclui o ktx; evita classes duplicadas com o ktx 2.7 transitivo.
+configurations.all {
+    exclude group: 'androidx.work', module: 'work-runtime-ktx'
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'

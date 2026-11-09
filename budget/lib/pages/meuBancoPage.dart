@@ -1,11 +1,21 @@
+import 'package:budget/pages/meuBancoParear.dart';
 import 'package:budget/struct/atualizador.dart';
+import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/pareamento.dart';
+import 'package:budget/struct/mbSync/pluggy.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/button.dart';
 import 'package:budget/widgets/framework/pageFramework.dart';
+import 'package:budget/widgets/globalSnackbar.dart';
+import 'package:budget/functions.dart';
+import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/textInput.dart';
 import 'package:budget/widgets/textWidgets.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 class MeuBancoPage extends StatefulWidget {
   const MeuBancoPage({Key? key}) : super(key: key);
@@ -19,13 +29,18 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
       TextEditingController(text: meuBancoUrlPadrao);
   final TextEditingController _token = TextEditingController();
   bool _temToken = false;
+  bool _atualizando = false;
   bool _procurandoAtualizacao = false;
   String? _msgAtualizacao;
+  List<Map<String, dynamic>> _avisos = [];
 
   @override
   void initState() {
     super.initState();
     _carregar();
+    _carregarAvisos();
+    meuBancoUltimaSync.addListener(_carregarAvisos);
+    meuBancoAtualizarFila();
   }
 
   Future<void> _carregar() async {
@@ -38,18 +53,65 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     });
   }
 
+  Future<void> _carregarAvisos() async {
+    List<Map<String, dynamic>> avisos = [];
+    try {
+      final bruto = await mbLerEstado('avisos');
+      if (bruto != null) {
+        avisos = [
+          for (final a in jsonDecode(bruto) as List)
+            if (a is Map) Map<String, dynamic>.from(a)
+        ];
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _avisos = avisos);
+  }
+
+  Future<void> _reconectar(Map<String, dynamic> aviso) async {
+    final itemId = aviso['item_id'];
+    if (itemId is String && itemId.isNotEmpty) {
+      await mbAbrirConnect(context, itemId: itemId);
+      return;
+    }
+    final url = Uri.tryParse('${aviso['reconnect_url'] ?? ''}');
+    if (url != null && url.scheme == 'https') {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   void dispose() {
+    meuBancoUltimaSync.removeListener(_carregarAvisos);
     _url.dispose();
     _token.dispose();
     super.dispose();
   }
 
   Future<void> _sincronizar() async {
-    await meuBancoSalvarConfig(token: _token.text, url: _url.text);
-    _token.clear();
-    await _carregar();
+    final url = _url.text.trim().replaceAll(RegExp(r'/+$'), '');
+    final token = _token.text.trim();
+    // Token novo ou endereço diferente é pareamento: mesma validação e confirmação do QR.
+    if (token.isNotEmpty || url != await meuBancoLerUrl()) {
+      if (token.isEmpty || !mbOrigemPermitida(url, debug: kDebugMode)) {
+        openSnackbar(SnackbarMessage(
+            title: "Informe um endereço https válido e o token para parear."));
+        return;
+      }
+      if (!mounted || !await mbConfirmarEParear(context, MbPareamento(url, token))) {
+        return;
+      }
+      _token.clear();
+      await _carregar();
+      return;
+    }
     await sincronizarMeuBanco();
+  }
+
+  Future<void> _atualizarAgora() async {
+    setState(() => _atualizando = true);
+    final msg = await meuBancoAtualizar();
+    if (mounted) setState(() => _atualizando = false);
+    openSnackbar(SnackbarMessage(title: msg));
   }
 
   Future<void> _procurarAtualizacao() async {
@@ -65,9 +127,12 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     });
   }
 
-  String _formatar(DateTime d) {
-    String dois(int n) => n.toString().padLeft(2, "0");
-    return "${dois(d.day)}/${dois(d.month)}/${d.year} ${dois(d.hour)}:${dois(d.minute)}";
+  String _haQuanto(DateTime d) {
+    final min = DateTime.now().difference(d).inMinutes;
+    if (min < 1) return "Sincronizado agora há pouco";
+    if (min < 60) return "Sincronizado há $min min";
+    if (min < 1440) return "Sincronizado há ${min ~/ 60} h";
+    return "Sincronizado há ${min ~/ 1440} d";
   }
 
   @override
@@ -106,6 +171,59 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
             padding: EdgeInsetsDirectional.zero,
           ),
         ),
+        if (!kIsWeb)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: Button(
+              label: "Parear com QR",
+              expandedLayout: true,
+              onTap: () async {
+                await pushRoute(context, const MeuBancoParearPage());
+                await _carregar();
+              },
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 5),
+          child: Button(
+            label: "Conectar banco",
+            expandedLayout: true,
+            onTap: () => mbAbrirConnect(context),
+          ),
+        ),
+        for (final aviso in _avisos)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFont(
+                  text: "${aviso['banco'] ?? 'Conexão'}: ${aviso['mensagem'] ?? ''}",
+                  fontSize: 14,
+                  maxLines: 6,
+                ),
+                const SizedBox(height: 5),
+                Button(
+                  label: "Reconectar",
+                  expandedLayout: true,
+                  onTap: () => _reconectar(aviso),
+                ),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 5),
+          child: Button(
+            label: _atualizando ? "Atualizando..." : "Atualizar agora",
+            disabled: _atualizando,
+            expandedLayout: true,
+            onTap: _atualizarAgora,
+          ),
+        ),
         ValueListenableBuilder<bool>(
           valueListenable: meuBancoSincronizando,
           builder: (context, sincronizando, _) => Padding(
@@ -126,10 +244,37 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
                 horizontal: 20, vertical: 5),
             child: TextFont(
               text: ultima == null
-                  ? "Última sincronização: ainda não nesta sessão"
-                  : "Última sincronização: " + _formatar(ultima),
+                  ? "Ainda não sincronizado nesta sessão"
+                  : _haQuanto(ultima),
               fontSize: 14,
               maxLines: 3,
+            ),
+          ),
+        ),
+        ValueListenableBuilder<MbFila>(
+          valueListenable: meuBancoFila,
+          builder: (context, fila, _) => Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (fila.pendentes > 0)
+                  TextFont(
+                    text: fila.pendentes == 1
+                        ? "1 alteração aguardando envio"
+                        : "${fila.pendentes} alterações aguardando envio",
+                    fontSize: 14,
+                    maxLines: 2,
+                  ),
+                for (final r in fila.rejeitados)
+                  TextFont(
+                    text: "Rejeitado: $r",
+                    fontSize: 13,
+                    maxLines: 4,
+                    textColor: Theme.of(context).colorScheme.error,
+                  ),
+              ],
             ),
           ),
         ),
@@ -172,18 +317,19 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
             maxLines: 5,
           ),
         ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 10),
-          child: Button(
-            label: _procurandoAtualizacao
-                ? "Procurando..."
-                : "Procurar atualização",
-            disabled: _procurandoAtualizacao,
-            expandedLayout: true,
-            onTap: _procurarAtualizacao,
+        if (!kIsWeb)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 10),
+            child: Button(
+              label: _procurandoAtualizacao
+                  ? "Procurando..."
+                  : "Procurar atualização",
+              disabled: _procurandoAtualizacao,
+              expandedLayout: true,
+              onTap: _procurarAtualizacao,
+            ),
           ),
-        ),
         if (_msgAtualizacao != null)
           Padding(
             padding: const EdgeInsetsDirectional.symmetric(

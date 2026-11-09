@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
@@ -100,6 +101,8 @@ Future<bool> initializeSettings() async {
   //   // appStateSettings["font"] = "SFProText";
   //   appStateSettings["font"] = "Avenir";
   // }
+
+  if (kIsWeb) appStateSettings["hasOnboarded"] = true;
 
   if (appStateSettings["hasOnboarded"] == true) {
     appStateSettings["numLogins"] = appStateSettings["numLogins"] + 1;

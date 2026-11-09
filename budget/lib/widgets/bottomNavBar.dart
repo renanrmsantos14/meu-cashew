@@ -6,6 +6,8 @@ import 'package:budget/pages/editObjectivesPage.dart';
 import 'package:budget/pages/subscriptionsPage.dart';
 import 'package:budget/pages/transactionsListPage.dart';
 import 'package:budget/pages/upcomingOverdueTransactionsPage.dart';
+import 'package:budget/struct/editorial.dart';
+import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/navBarIconsData.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/fadeIn.dart';
@@ -36,6 +38,23 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class BottomNavBarState extends State<BottomNavBar> {
+  // No modo Meu Banco o 4º item é Metas e "Mais" sai da barra.
+  static const int _indiceMetas = 14;
+
+  @override
+  void initState() {
+    super.initState();
+    meuBancoPareado.addListener(_aoMudarPareado);
+  }
+
+  void _aoMudarPareado() => setState(() {});
+
+  @override
+  void dispose() {
+    meuBancoPareado.removeListener(_aoMudarPareado);
+    super.dispose();
+  }
+
   void onItemTapped(int indexOfNavigationBar, {bool allowReApply = false}) {
     int navigationStackedIndex =
         getNavigationStackedIndexFromBarIndex(indexOfNavigationBar);
@@ -81,7 +100,7 @@ class BottomNavBarState extends State<BottomNavBar> {
               ?.navigationIndexedStackIndex ??
           2;
     } else {
-      return 3;
+      return meuBancoPareado.value ? _indiceMetas : 3;
     }
   }
 
@@ -112,6 +131,17 @@ class BottomNavBarState extends State<BottomNavBar> {
         widget.currentNavigationStackedIndex);
 
     if (getIsFullScreen(context)) return SizedBox.shrink();
+    if (meuBancoPareado.value) {
+      return _BarraEditorial(
+        atalhos: [
+          for (final k in ["customNavBarShortcut0", "customNavBarShortcut1", "customNavBarShortcut2"])
+            "${appStateSettings[k]}",
+          "goals",
+        ],
+        ativo: navigationBarIndex,
+        aoTocar: onItemTapped,
+      );
+    }
     if (getPlatform() == PlatformOS.isIOS) {
       return IntrinsicHeight(
         child: Container(
@@ -606,6 +636,74 @@ class NavBarIcon extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+const Map<String, String> _rotulosEditorial = {
+  "home": "Início",
+  "transactions": "Transações",
+  "budgets": "Orçamentos",
+  "goals": "Metas",
+};
+
+class _BarraEditorial extends StatelessWidget {
+  const _BarraEditorial(
+      {required this.atalhos, required this.ativo, required this.aoTocar});
+  final List<String> atalhos;
+  final int ativo;
+  final void Function(int) aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = cores(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: e.bg,
+        border: Border(top: BorderSide(color: e.line)),
+      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+      child: Row(
+        children: [
+          for (var i = 0; i < atalhos.length; i++)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: i == ativo,
+                child: InkResponse(
+                  onTap: () => aoTocar(i),
+                  child: SizedBox(
+                    height: 56,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                            navBarIconsData[atalhos[i]]?.iconData ??
+                                Icons.circle_outlined,
+                            size: 22,
+                            color: i == ativo ? e.acc : e.mu),
+                        const SizedBox(height: 3),
+                        Text(
+                            _rotulosEditorial[atalhos[i]] ??
+                                (navBarIconsData[atalhos[i]]?.label ?? "").tr(),
+                            style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: i == ativo ? e.acc : e.mu)),
+                        const SizedBox(height: 3),
+                        Container(
+                            width: 24,
+                            height: 2,
+                            color: i == ativo ? e.acc : Colors.transparent),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

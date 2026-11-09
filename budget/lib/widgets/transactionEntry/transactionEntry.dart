@@ -1,3 +1,4 @@
+import 'package:budget/widgets/editorial/layoutDesktop.dart' show ehDesktop, mbTransacaoSelecionada;
 import 'dart:convert';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
@@ -681,7 +682,12 @@ class TransactionEntry extends StatelessWidget {
                               selectTransaction(transaction, selected, true);
                             },
                             onTap: () async {
-                              openContainer();
+                              if (ehDesktop(context)) {
+                                mbTransacaoSelecionada.value =
+                                    transaction.transactionPk;
+                              } else {
+                                openContainer();
+                              }
                             },
                             child: AnimatedContainer(
                               clipBehavior: Clip.none,

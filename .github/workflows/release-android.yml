@@ -59,7 +59,7 @@ jobs:
 
       - run: flutter test
 
-      - run: flutter build apk --release
+      - run: flutter build apk --release --dart-define=MB_COMPILADO="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
 
       - name: Renomear APK
         run: cp build/app/outputs/flutter-apk/app-release.apk "meu-cashew-${VERSAO}.apk"

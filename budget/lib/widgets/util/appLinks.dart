@@ -6,6 +6,7 @@ import 'package:budget/pages/addEmailTemplate.dart';
 import 'package:budget/pages/addTransactionPage.dart';
 import 'package:budget/pages/autoTransactionsPageEmail.dart';
 import 'package:budget/struct/databaseGlobal.dart';
+import 'package:budget/struct/mbSync/pareamento.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/struct/throttler.dart';
 import 'package:budget/widgets/globalSnackbar.dart';
@@ -276,6 +277,15 @@ Future processMessageToParse(
 
 Future executeAppLink(BuildContext? context, Uri uri,
     {Function(dynamic)? onDebug}) async {
+  if (uri.scheme == 'meubanco') {
+    final p = mbLerLinkPareamento(uri);
+    if (p != null) {
+      await mbConfirmarEParear(context ?? navigatorKey.currentContext, p);
+    } else {
+      openSnackbar(SnackbarMessage(title: "Link de pareamento inválido"));
+    }
+    return;
+  }
   if (appStateSettings["hasOnboarded"] != true) return;
   if (!appLinksThrottler.canProceed()) return;
 

@@ -1,3 +1,7 @@
+import 'package:budget/widgets/editorial/layoutDesktop.dart'
+    show mbPaginaAtual, ObservadorPaginas;
+import 'package:budget/widgets/editorial/versaoCanto.dart'
+    show FaixaVersao, mbAlturaFaixaVersao;
 import 'dart:async';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:animations/animations.dart';
@@ -88,6 +92,7 @@ class InitialPageRouteNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Navigator(
       key: navigatorKey,
+      observers: [ObservadorPaginas()],
       onGenerateRoute: (settings) => PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             AnimatedSwitcher(
@@ -393,7 +398,11 @@ class PageNavigationFrameworkState extends State<PageNavigationFramework> {
       : 0;
   int previousPage = 0;
 
-  void changePage(int page, {bool switchNavbar = true}) {
+  bool _animarTroca = true;
+
+  void changePage(int page, {bool switchNavbar = true, bool animar = true}) {
+    _animarTroca = animar;
+    mbPaginaAtual.value = page;
     if (switchNavbar) {
       sidebarStateKey.currentState?.setSelectedIndex(page);
     }
@@ -499,25 +508,33 @@ class PageNavigationFrameworkState extends State<PageNavigationFramework> {
         body: FadeIndexedStack(
           children: [...pages, ...pagesExtended],
           index: currentPage,
-          duration: !kIsWeb
+          duration: !kIsWeb || !_animarTroca
               ? Duration.zero
               : appStateSettings["batterySaver"]
                   ? Duration.zero
                   : Duration(milliseconds: 300),
         ),
         extendBody: false,
-        bottomNavigationBar: BottomNavBar(
-          currentNavigationStackedIndex: currentPage,
-          onChanged: (index) {
-            changePage(index);
-          },
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!getIsFullScreen(context)) const FaixaVersao(),
+            BottomNavBar(
+              currentNavigationStackedIndex: currentPage,
+              onChanged: (index) {
+                changePage(index);
+              },
+            ),
+          ],
         ),
       ),
       Align(
         alignment: AlignmentDirectional.bottomEnd,
         child: Padding(
           padding: EdgeInsetsDirectional.only(
-            bottom: getHeightNavigationSidebar(context) + 15,
+            bottom: getHeightNavigationSidebar(context) +
+                15 +
+                (getIsFullScreen(context) ? 0 : mbAlturaFaixaVersao),
             end: 15,
           ),
           child: AnimateFAB(
@@ -1125,6 +1142,7 @@ class FadeIndexedStackState extends State<FadeIndexedStack>
   @override
   void didUpdateWidget(FadeIndexedStack oldWidget) {
     if (widget.index != oldWidget.index) {
+      _controller.duration = widget.duration;
       _controller.forward(from: 0.0);
     }
     super.didUpdateWidget(oldWidget);

@@ -1,4 +1,7 @@
+import 'package:budget/widgets/editorial/layoutDesktop.dart';
+import 'package:budget/widgets/editorial/versaoCanto.dart';
 import 'package:budget/functions.dart';
+import 'package:budget/struct/mbSync/segundoPlano.dart';
 import 'package:budget/pages/accountsPage.dart';
 import 'package:budget/pages/autoTransactionsPageEmail.dart';
 import 'package:budget/struct/currencyFunctions.dart';
@@ -26,14 +29,13 @@ import 'package:budget/widgets/restartApp.dart';
 import 'package:budget/struct/customDelayedCurve.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:budget/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'firebase_options.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 // Requires hot restart when changed
@@ -44,14 +46,13 @@ bool allowDangerousDebugFlags = kDebugMode;
 void main() async {
   captureLogs(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    // Fork sem google-services: falha do Firebase não pode derrubar o app.
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e) {
-      print("Firebase indisponível: " + e.toString());
-    }
+    LicenseRegistry.addLicense(() async* {
+      for (final f in const ['OFL-Geist.txt', 'OFL-SourceSerif.txt']) {
+        yield LicenseEntryWithLineBreaks(
+            [f == 'OFL-Geist.txt' ? 'Geist' : 'Source Serif 4'],
+            await rootBundle.loadString('assets/fonts/$f'));
+      }
+    });
     await EasyLocalization.ensureInitialized();
     sharedPreferences = await SharedPreferences.getInstance();
     database = await constructDb('db');
@@ -60,6 +61,13 @@ void main() async {
     await loadCurrencyJSON();
     await loadLanguageNamesJSON();
     await initializeSettings();
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await mbRegistrarSegundoPlano();
+      } catch (e) {
+        if (kDebugMode) debugPrint('Segundo plano indisponível: $e');
+      }
+    }
     tz.initializeTimeZones();
     final String? locationName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(locationName ?? "America/New_York"));
@@ -123,21 +131,25 @@ class App extends StatelessWidget {
       darkTheme: getDarkTheme(),
       scrollBehavior: ScrollBehaviorOverride(),
       themeMode: getSettingConstants(appStateSettings)["theme"],
+      navigatorObservers: [ObservadorPaginas()],
       home: HandleWillPopScope(
         child: Stack(
           children: [
-            Row(
-              children: [
-                NavigationSidebar(key: sidebarStateKey),
-                Expanded(
-                    child: Stack(
-                  children: [
-                    InitialPageRouteNavigator(),
-                    GlobalSnackbar(key: snackbarKey),
-                  ],
-                )),
-              ],
-            ),
+            Builder(builder: (context) {
+              final conteudo = Stack(
+                children: [
+                  InitialPageRouteNavigator(),
+                  GlobalSnackbar(key: snackbarKey),
+                ],
+              );
+              if (ehDesktop(context)) return LayoutDesktop(conteudo: conteudo);
+              return Row(
+                children: [
+                  NavigationSidebar(key: sidebarStateKey),
+                  Expanded(child: conteudo),
+                ],
+              );
+            }),
             EnableSignInWithGoogleFlyIn(),
             GlobalLoadingIndeterminate(key: loadingIndeterminateKey),
             GlobalLoadingProgress(key: loadingProgressKey),
@@ -172,11 +184,10 @@ class App extends StatelessWidget {
         );
 
         if (kIsWeb) {
-          return FadeIn(
+          mainWidget = FadeIn(
               duration: Duration(milliseconds: 1000), child: mainWidget);
-        } else {
-          return mainWidget;
         }
+        return VersaoCanto(child: mainWidget);
       },
       // ),
     );

@@ -99,8 +99,11 @@ dependencies:
   flutter_displaymode: ^0.6.0
   notification_listener_service: ^0.3.3
   home_widget: ^0.6.0
+  workmanager: 0.5.2
   material_symbols_icons: ^4.2768.0
-  app_links: ^6.1.4
+  app_links: 6.3.1
+  mobile_scanner: ^5.2.3
+  flutter_pluggy_connect: 3.0.1
   expandable_page_view: ^1.0.17
   flutter_staggered_grid_view: ^0.7.0
   flutter_colorpicker: ^1.1.0
@@ -181,6 +184,25 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
 
   fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Geist-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Geist-Medium.ttf
+          weight: 500
+    - family: GeistMono
+      fonts:
+        - asset: assets/fonts/GeistMono-Regular.ttf
+    - family: SerifEditorial
+      fonts:
+        - asset: assets/fonts/SourceSerif4-It.ttf
+          style: italic
+    # Sem uma família "Roboto" declarada, o CanvasKit baixa a fonte de fonts.gstatic.com (bloqueado pela CSP do /app/)
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
     - family: Avenir
       fonts:
         - asset: assets/fonts/AvenirLTStd-Roman.otf

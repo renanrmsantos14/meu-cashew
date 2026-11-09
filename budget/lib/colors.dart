@@ -1,4 +1,5 @@
 import 'package:budget/functions.dart';
+import 'package:budget/struct/editorial.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -610,6 +611,9 @@ ThemeData generateThemeDataWithExtension(
 }
 
 ThemeData getLightTheme() {
+  if (appStateSettings["temaEditorial"] != false) {
+    return temaEditorial(Brightness.light);
+  }
   Brightness brightness = Brightness.light;
   ThemeData themeData = ThemeData(
     // pageTransitionsTheme: PageTransitionsTheme(builders: {
@@ -644,6 +648,9 @@ ThemeData getLightTheme() {
 }
 
 ThemeData getDarkTheme() {
+  if (appStateSettings["temaEditorial"] != false) {
+    return temaEditorial(Brightness.dark);
+  }
   Brightness brightness = Brightness.dark;
   ThemeData themeData = ThemeData(
     // pageTransitionsTheme: PageTransitionsTheme(builders: {

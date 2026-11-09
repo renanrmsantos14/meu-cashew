@@ -1,11 +1,11 @@
 {
-    "name": "Cashew",
-    "short_name": "Cashew",
-    "start_url": ".",
+    "name": "Meu Banco",
+    "short_name": "Meu Banco",
+    "start_url": "./",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#5f85c2",
-    "description": "A budget and financial tracking application designed for you",
+    "background_color": "#F7F6F3",
+    "theme_color": "#2340D8",
+    "description": "Suas finanças no Meu Banco",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
