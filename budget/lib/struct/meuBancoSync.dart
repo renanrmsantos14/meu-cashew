@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart' show DateFormat;
 
 const String meuBancoUrlPadrao =
     "https://meu-banco.renanrmsantos14.workers.dev";
@@ -268,4 +269,30 @@ Future<void> _aplicar(MbResultado r) async {
   }
   await mbGravarAplicado({for (final t in r.transacoes) t.pk: t.categoriaPk},
       removidos);
+}
+
+// Pede ao Worker para consultar a Pluggy agora e, se deu certo, sincroniza. Retorna a mensagem do snackbar.
+Future<String> meuBancoAtualizar() async {
+  try {
+    final cliente = await mbClienteConfigurado();
+    if (cliente == null) return "Pareie o app com o Meu Banco primeiro.";
+    final r = await cliente.atualizar();
+    if (r['ok'] == true) {
+      await sincronizarMeuBanco();
+      return "Atualizado";
+    }
+    return (r['mensagem'] ?? "Não foi possível atualizar agora.").toString();
+  } on MbErroLimite catch (e) {
+    final quando = e.liberadoEm?.toLocal();
+    if (quando == null) return e.mensagem;
+    return "Atualizado há pouco. Tente de novo às ${DateFormat.Hm('pt_BR').format(quando)}.";
+  } on MbErroHttp catch (e) {
+    return e.status == 401 ? "Token inválido ou revogado. Pareie de novo." : e.mensagem;
+  } on TimeoutException {
+    return "O Meu Banco demorou a responder. Tente de novo.";
+  } on http.ClientException {
+    return "Sem conexão com o Meu Banco.";
+  } catch (e) {
+    return "$e";
+  }
 }

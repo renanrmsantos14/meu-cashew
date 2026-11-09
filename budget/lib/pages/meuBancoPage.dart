@@ -1,11 +1,16 @@
+import 'package:budget/pages/meuBancoParear.dart';
 import 'package:budget/struct/atualizador.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/button.dart';
 import 'package:budget/widgets/framework/pageFramework.dart';
+import 'package:budget/widgets/globalSnackbar.dart';
+import 'package:budget/functions.dart';
+import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/textInput.dart';
 import 'package:budget/widgets/textWidgets.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class MeuBancoPage extends StatefulWidget {
@@ -20,6 +25,7 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
       TextEditingController(text: meuBancoUrlPadrao);
   final TextEditingController _token = TextEditingController();
   bool _temToken = false;
+  bool _atualizando = false;
   bool _procurandoAtualizacao = false;
   String? _msgAtualizacao;
 
@@ -52,6 +58,13 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     _token.clear();
     await _carregar();
     await sincronizarMeuBanco();
+  }
+
+  Future<void> _atualizarAgora() async {
+    setState(() => _atualizando = true);
+    final msg = await meuBancoAtualizar();
+    if (mounted) setState(() => _atualizando = false);
+    openSnackbar(SnackbarMessage(title: msg));
   }
 
   Future<void> _procurarAtualizacao() async {
@@ -109,6 +122,29 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
             controller: _token,
             obscureText: true,
             padding: EdgeInsetsDirectional.zero,
+          ),
+        ),
+        if (!kIsWeb)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: Button(
+              label: "Parear com QR",
+              expandedLayout: true,
+              onTap: () async {
+                await pushRoute(context, const MeuBancoParearPage());
+                await _carregar();
+              },
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 5),
+          child: Button(
+            label: _atualizando ? "Atualizando..." : "Atualizar agora",
+            disabled: _atualizando,
+            expandedLayout: true,
+            onTap: _atualizarAgora,
           ),
         ),
         ValueListenableBuilder<bool>(
