@@ -1,3 +1,4 @@
+import 'package:budget/widgets/editorial/layoutDesktop.dart' show mbPaginaAtual;
 import 'dart:async';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:animations/animations.dart';
@@ -393,7 +394,11 @@ class PageNavigationFrameworkState extends State<PageNavigationFramework> {
       : 0;
   int previousPage = 0;
 
-  void changePage(int page, {bool switchNavbar = true}) {
+  bool _animarTroca = true;
+
+  void changePage(int page, {bool switchNavbar = true, bool animar = true}) {
+    _animarTroca = animar;
+    mbPaginaAtual.value = page;
     if (switchNavbar) {
       sidebarStateKey.currentState?.setSelectedIndex(page);
     }
@@ -499,7 +504,7 @@ class PageNavigationFrameworkState extends State<PageNavigationFramework> {
         body: FadeIndexedStack(
           children: [...pages, ...pagesExtended],
           index: currentPage,
-          duration: !kIsWeb
+          duration: !kIsWeb || !_animarTroca
               ? Duration.zero
               : appStateSettings["batterySaver"]
                   ? Duration.zero
@@ -1125,6 +1130,7 @@ class FadeIndexedStackState extends State<FadeIndexedStack>
   @override
   void didUpdateWidget(FadeIndexedStack oldWidget) {
     if (widget.index != oldWidget.index) {
+      _controller.duration = widget.duration;
       _controller.forward(from: 0.0);
     }
     super.didUpdateWidget(oldWidget);

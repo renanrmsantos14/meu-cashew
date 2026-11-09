@@ -1,6 +1,6 @@
 import 'package:budget/struct/settings.dart';
 import 'package:budget/struct/editorial.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:budget/widgets/editorial/layoutDesktop.dart' show ehDesktop;
 import 'package:flutter/material.dart';
 
 const String mbCompilado =
@@ -16,8 +16,7 @@ class VersaoCanto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lateralMostraVersao =
-        kIsWeb && MediaQuery.sizeOf(context).width >= 1100;
+    final lateralMostraVersao = ehDesktop(context);
     return Stack(
       textDirection: TextDirection.ltr,
       children: [

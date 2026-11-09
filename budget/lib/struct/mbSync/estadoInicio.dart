@@ -109,6 +109,12 @@ DateTime? _proximoDia(Object? iso, DateTime agora) {
   return c;
 }
 
+// "12 nov" do próximo dia de fechamento/vencimento de [iso].
+String? mbProximoDiaMes(Object? iso, DateTime agora) {
+  final d = _proximoDia(iso, agora);
+  return d == null ? null : _diaMes(d);
+}
+
 double _num(Object? v) => v is num ? v.toDouble() : 0;
 
 String _sigla(String nome) {

@@ -1,3 +1,4 @@
+import 'package:budget/widgets/editorial/layoutDesktop.dart';
 import 'package:budget/widgets/editorial/versaoCanto.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/struct/mbSync/segundoPlano.dart';
@@ -133,18 +134,21 @@ class App extends StatelessWidget {
       home: HandleWillPopScope(
         child: Stack(
           children: [
-            Row(
-              children: [
-                NavigationSidebar(key: sidebarStateKey),
-                Expanded(
-                    child: Stack(
-                  children: [
-                    InitialPageRouteNavigator(),
-                    GlobalSnackbar(key: snackbarKey),
-                  ],
-                )),
-              ],
-            ),
+            Builder(builder: (context) {
+              final conteudo = Stack(
+                children: [
+                  InitialPageRouteNavigator(),
+                  GlobalSnackbar(key: snackbarKey),
+                ],
+              );
+              if (ehDesktop(context)) return LayoutDesktop(conteudo: conteudo);
+              return Row(
+                children: [
+                  NavigationSidebar(key: sidebarStateKey),
+                  Expanded(child: conteudo),
+                ],
+              );
+            }),
             EnableSignInWithGoogleFlyIn(),
             GlobalLoadingIndeterminate(key: loadingIndeterminateKey),
             GlobalLoadingProgress(key: loadingProgressKey),
