@@ -3,6 +3,8 @@ import 'package:budget/database/generatePreviewData.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/homePage/homePageHeatmap.dart';
+import 'package:budget/pages/homePage/inicioEditorial.dart';
+import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/pages/homePage/homePageLineGraph.dart';
 import 'package:budget/pages/homePage/homePageNetWorth.dart';
 import 'package:budget/pages/homePage/homePageObjectives.dart';
@@ -84,6 +86,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     _scrollController = ScrollController();
     _scrollController.addListener(_scrollListener);
+    meuBancoPareado.addListener(refreshState);
+    meuBancoVerificarPareado();
   }
 
   _scrollListener() {
@@ -98,6 +102,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    meuBancoPareado.removeListener(refreshState);
     _animationControllerHeader.dispose();
     _animationControllerHeader2.dispose();
     _scrollController.dispose();
@@ -120,6 +125,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (meuBancoPareado.value) return const InicioEditorial();
     bool showUsername = appStateSettings["username"] != "";
     bool showGreeting = appStateSettings["enableGreetingMessage"] == true;
     Widget slidingSelector = GestureDetector(

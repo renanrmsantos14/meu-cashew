@@ -32,6 +32,12 @@ final ValueNotifier<String?> meuBancoUltimoErro = ValueNotifier(null);
 final ValueNotifier<DateTime?> meuBancoUltimaSync = ValueNotifier(null);
 final ValueNotifier<bool> meuBancoSincronizando = ValueNotifier(false);
 final ValueNotifier<MbFila> meuBancoFila = ValueNotifier(const MbFila(0, []));
+// Verdadeiro quando o app está pareado (token guardado) ou na web, que usa o cookie da mesma origem.
+final ValueNotifier<bool> meuBancoPareado = ValueNotifier(kIsWeb);
+
+Future<void> meuBancoVerificarPareado() async {
+  meuBancoPareado.value = kIsWeb || (await meuBancoLerToken())?.isNotEmpty == true;
+}
 
 Future<String?> meuBancoLerToken() async {
   try {
@@ -65,6 +71,7 @@ Future<void> meuBancoSalvarConfig({String? token, String? url}) async {
 // Apaga token e cursor. Não apaga transações já importadas.
 Future<void> meuBancoDesconectar() async {
   await _storage.delete(key: _chaveToken);
+  meuBancoPareado.value = kIsWeb;
   await updateSettings(_chaveDesde, null, updateGlobalState: false);
   await mbCriarTabelas();
   await mbRemoverEstado('cursor');
@@ -177,6 +184,7 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     await mbGravarEstado(estado);
     await mbAtualizarWidget();
     meuBancoUltimoErro.value = null;
+    meuBancoPareado.value = true;
     meuBancoUltimaSync.value = DateTime.now();
     return true;
   } on MbErroHttp catch (e) {
