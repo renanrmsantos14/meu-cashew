@@ -112,6 +112,9 @@ class InitializeLocalizations extends StatelessWidget {
       useOnlyLangCode: false,
       assetLoader: RootBundleAssetLoaderCustomLocaleLoader(),
       supportedLocales: supportedLocales.values.toList(),
+      // Sem isto o idioma salvo nas configurações (padrão "pt") só vale depois de
+      // escolhido de novo na tela de idioma; até lá vale o idioma do aparelho.
+      startLocale: supportedLocales[appStateSettings["locale"]],
       path: 'assets/translations/generated',
       useFallbackTranslations: true,
       fallbackLocale: supportedLocales.values.toList().first,

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:budget/struct/editorial.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/editorial/movimento.dart';
@@ -120,5 +122,25 @@ void main() {
             matching: find.byType(Transform)))
         .first;
     expect(m.transform.storage[0], 1.0);
+  });
+
+  test('tema editorial dá contraste legível nos papéis de container usados pelo Cashew', () {
+    double contraste(Color a, Color b) {
+      final la = a.computeLuminance(), lb = b.computeLuminance();
+      return (max(la, lb) + 0.05) / (min(la, lb) + 0.05);
+    }
+
+    for (final b in Brightness.values) {
+      final c = temaEditorial(b).colorScheme;
+      final pares = {
+        'onPrimaryContainer/surface': (c.onPrimaryContainer, c.surface),
+        'onPrimaryContainer/primaryContainer': (c.onPrimaryContainer, c.primaryContainer),
+        'onSecondaryContainer/secondaryContainer': (c.onSecondaryContainer, c.secondaryContainer),
+        'onSurface/surface': (c.onSurface, c.surface),
+      };
+      pares.forEach((nome, par) {
+        expect(contraste(par.$1, par.$2), greaterThanOrEqualTo(4.5), reason: '$b $nome');
+      });
+    }
   });
 }
