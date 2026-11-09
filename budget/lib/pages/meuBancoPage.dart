@@ -1,6 +1,7 @@
 import 'package:budget/pages/meuBancoParear.dart';
 import 'package:budget/struct/atualizador.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/pluggy.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/button.dart';
@@ -12,6 +13,8 @@ import 'package:budget/widgets/textInput.dart';
 import 'package:budget/widgets/textWidgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 class MeuBancoPage extends StatefulWidget {
   const MeuBancoPage({Key? key}) : super(key: key);
@@ -28,11 +31,14 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
   bool _atualizando = false;
   bool _procurandoAtualizacao = false;
   String? _msgAtualizacao;
+  List<Map<String, dynamic>> _avisos = [];
 
   @override
   void initState() {
     super.initState();
     _carregar();
+    _carregarAvisos();
+    meuBancoUltimaSync.addListener(_carregarAvisos);
     meuBancoAtualizarFila();
   }
 
@@ -46,8 +52,35 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     });
   }
 
+  Future<void> _carregarAvisos() async {
+    List<Map<String, dynamic>> avisos = [];
+    try {
+      final bruto = await mbLerEstado('avisos');
+      if (bruto != null) {
+        avisos = [
+          for (final a in jsonDecode(bruto) as List)
+            if (a is Map) Map<String, dynamic>.from(a)
+        ];
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _avisos = avisos);
+  }
+
+  Future<void> _reconectar(Map<String, dynamic> aviso) async {
+    final itemId = aviso['item_id'];
+    if (itemId is String && itemId.isNotEmpty) {
+      await mbAbrirConnect(context, itemId: itemId);
+      return;
+    }
+    final url = Uri.tryParse('${aviso['reconnect_url'] ?? ''}');
+    if (url != null && url.scheme == 'https') {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   void dispose() {
+    meuBancoUltimaSync.removeListener(_carregarAvisos);
     _url.dispose();
     _token.dispose();
     super.dispose();
@@ -135,6 +168,36 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
                 await pushRoute(context, const MeuBancoParearPage());
                 await _carregar();
               },
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 5),
+          child: Button(
+            label: "Conectar banco",
+            expandedLayout: true,
+            onTap: () => mbAbrirConnect(context),
+          ),
+        ),
+        for (final aviso in _avisos)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFont(
+                  text: "${aviso['banco'] ?? 'Conexão'}: ${aviso['mensagem'] ?? ''}",
+                  fontSize: 14,
+                  maxLines: 6,
+                ),
+                const SizedBox(height: 5),
+                Button(
+                  label: "Reconectar",
+                  expandedLayout: true,
+                  onTap: () => _reconectar(aviso),
+                ),
+              ],
             ),
           ),
         Padding(
