@@ -289,6 +289,8 @@ void main() {
     await sync();
     expect((await _txs()).map((t) => t.transactionPk), contains('mb:t1'));
     expect(cliente.enviados.where((r) => r.id == 'cashew:c1'), isNotEmpty);
+    expect((await database.select(database.categories).get())
+        .where((c) => c.categoryPk.startsWith('mb:cat:')), isNotEmpty);
 
     await mbTrocarConta();
     expect((await _txs()).where((t) => t.transactionPk.startsWith('mb:')), isEmpty);
@@ -296,6 +298,8 @@ void main() {
     expect(await mbLerAplicado(), isEmpty);
     expect(await mbLerEstado('cursor'), isNull);
     expect(await database.getCategoryInstanceOrNull('c1'), isNotNull);
+    final cats = await database.select(database.categories).get();
+    expect(cats.where((c) => c.categoryPk.startsWith('mb:cat:')), isEmpty);
 
     cliente.enviados.clear();
     cliente.extra = {};

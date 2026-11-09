@@ -50,6 +50,15 @@ Future<void> mbTrocarConta() async {
     await database.customStatement('DELETE FROM mb_estado');
     await database.customStatement(
         'DELETE FROM transactions WHERE transaction_pk LIKE ?', ['$mbPrefixo%']);
+    // Categorias importadas sem uso local saem; as que ainda têm lançamento do Cashew ficam.
+    await database.customStatement(
+        "DELETE FROM associated_titles WHERE category_fk LIKE 'mb:cat:%'");
+    await database.customStatement('''
+      DELETE FROM categories WHERE category_pk LIKE 'mb:cat:%'
+        AND category_pk NOT IN (SELECT category_fk FROM transactions)
+        AND category_pk NOT IN (SELECT sub_category_fk FROM transactions WHERE sub_category_fk IS NOT NULL)
+        AND category_pk NOT IN (SELECT category_fk FROM category_budget_limits)
+        AND category_pk NOT IN (SELECT main_category_pk FROM categories WHERE main_category_pk IS NOT NULL)''');
   });
 }
 
