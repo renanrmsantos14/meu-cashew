@@ -1,4 +1,4 @@
-import 'package:budget/colors.dart';
+import 'package:budget/struct/temas.dart';
 import 'package:flutter/material.dart';
 
 class EditorialCores extends ThemeExtension<EditorialCores> {
@@ -155,50 +155,5 @@ class EdTexto {
       );
 }
 
-ThemeData temaEditorial(Brightness b) {
-  final claro = b == Brightness.light;
-  final e = claro ? EditorialCores.claro : EditorialCores.escuro;
-  final base = ThemeData(
-    useMaterial3: true,
-    fontFamily: 'Geist',
-    fontFamilyFallback: const ['Inter'],
-    scaffoldBackgroundColor: e.bg,
-    // fromSeed preenche os papéis de container (primaryContainer, secondaryContainer…)
-    // usados pelas telas herdadas do Cashew; sem isso viram primário/branco.
-    colorScheme: ColorScheme.fromSeed(seedColor: e.acc, brightness: b).copyWith(
-      primary: e.acc,
-      onPrimary: claro ? Colors.white : e.bg,
-      secondary: e.acc,
-      onSecondary: claro ? Colors.white : e.bg,
-      error: e.warn,
-      onError: claro ? Colors.white : e.bg,
-      surface: e.bg,
-      onSurface: e.tx,
-      surfaceContainerLowest: e.surf,
-      outline: e.line,
-      outlineVariant: e.line,
-    ),
-    dividerTheme: DividerThemeData(color: e.line, thickness: 1, space: 1),
-    cardTheme: const CardTheme(
-      elevation: 0,
-      color: Colors.transparent,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    ),
-    splashFactory: NoSplash.splashFactory,
-    typography: Typography.material2021(),
-  );
-  final tema = generateThemeDataWithExtension(
-      themeData: base, brightness: b, accentColor: e.acc);
-  return tema.copyWith(extensions: [...tema.extensions.values, e]);
-}
+ThemeData temaEditorial(Brightness b) => temaFlutter(
+    temaPorId(b == Brightness.light ? 'padrao-claro' : 'padrao-escuro'));

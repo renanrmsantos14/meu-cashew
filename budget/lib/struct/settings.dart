@@ -15,6 +15,7 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/defaultPreferences.dart';
 import 'package:budget/widgets/navigationFramework.dart';
 import 'package:budget/colors.dart';
+import 'package:budget/struct/temas.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:budget/struct/languageMap.dart';
@@ -77,6 +78,15 @@ Future<bool> initializeSettings() async {
   }
 
   appStateSettings = userSettings;
+  // Material You e cor de destaque livre foram substituídos pelos temas prontos.
+  appStateSettings["materialYou"] = false;
+  appStateSettings["accentSystemColor"] = false;
+  appStateSettings["accentColor"] = toHexString(temaAtivo(
+          modoDoTema(appStateSettings["temaPronto"]) == ThemeMode.dark
+              ? Brightness.dark
+              : Brightness.light)
+      .cores
+      .acc);
   print(
       "App settings loaded: if logging is enabled, logs will now be captured");
 
@@ -212,15 +222,8 @@ Future<bool> updateSettings(
 }
 
 Map<String, dynamic> getSettingConstants(Map<String, dynamic> userSettings) {
-  Map<String, dynamic> themeSetting = {
-    "system": ThemeMode.system,
-    "light": ThemeMode.light,
-    "dark": ThemeMode.dark,
-    "black": ThemeMode.dark,
-  };
-
   Map<String, dynamic> userSettingsNew = {...userSettings};
-  userSettingsNew["theme"] = themeSetting[userSettings["theme"]];
+  userSettingsNew["theme"] = modoDoTema(userSettings["temaPronto"]);
   userSettingsNew["accentColor"] =
       HexColor(userSettings["accentColor"]).withOpacity(1);
   return userSettingsNew;
