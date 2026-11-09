@@ -2,7 +2,6 @@ import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/globalSnackbar.dart';
-import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
