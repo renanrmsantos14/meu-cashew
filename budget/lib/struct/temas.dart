@@ -29,7 +29,6 @@ TemaPronto _tema(
   required int acc,
   required int warn,
   required int pos,
-  int? warntx,
   bool altoContraste = false,
 }) {
   final claro = brilho == Brightness.light;
@@ -56,7 +55,7 @@ TemaPronto _tema(
       acc: a,
       warn: w,
       warnbg: _opaco(w, .12, b),
-      warntx: warntx == null ? w : Color(0xFF000000 | warntx),
+      warntx: w,
       pos: Color(0xFF000000 | pos),
       chip: _opaco(a, .12, b),
     ),
@@ -110,8 +109,22 @@ final List<TemaPronto> temasProntos = List.unmodifiable([
       altoContraste: true),
 ]);
 
-TemaPronto temaPorId(String id) => temasProntos.firstWhere((t) => t.id == id,
-    orElse: () => temasProntos.first);
+// Opção "Seguir o sistema": fica fora de temasProntos (são os 18 temas fixos).
+const temaSistema = TemaPronto(
+    id: 'sistema',
+    nome: 'Seguir o sistema',
+    brilho: Brightness.light,
+    cores: EditorialCores.claro);
+
+TemaPronto temaPorId(String id) => id == 'sistema'
+    ? temaSistema
+    : temasProntos.firstWhere((t) => t.id == id,
+        orElse: () => temasProntos.first);
+
+String idTemaSalvo() {
+  final id = appStateSettings["temaPronto"];
+  return id is String ? id : 'sistema';
+}
 
 TemaPronto _padraoDoBrilho(Brightness b) =>
     temaPorId(b == Brightness.dark ? 'padrao-escuro' : 'padrao-claro');
@@ -160,9 +173,8 @@ AppColors coresCashew(TemaPronto t) {
 }
 
 Color _melhorSobre(Color fundo, List<Color> candidatos) {
-  double lum(Color c) => c.computeLuminance();
   double contraste(Color a, Color b) {
-    final x = lum(a), y = lum(b);
+    final x = a.computeLuminance(), y = b.computeLuminance();
     return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
   }
 

@@ -46,9 +46,7 @@ class _AparenciaPageState extends State<AparenciaPage> {
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 24),
           child: GradeTemas(
-            selecionado: appStateSettings["temaPronto"] is String
-                ? appStateSettings["temaPronto"]
-                : "sistema",
+            selecionado: idTemaSalvo(),
             aoEscolher: _escolher,
           ),
         ),
@@ -65,7 +63,6 @@ class GradeTemas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = cores(context);
     return LayoutBuilder(builder: (context, box) {
       final colunas = MediaQuery.sizeOf(context).width < 600 ? 2 : 3;
       const espaco = 12.0;
@@ -74,13 +71,12 @@ class GradeTemas extends StatelessWidget {
         spacing: espaco,
         runSpacing: espaco,
         children: [
-          for (final t in temasProntos)
+          for (final t in [temaSistema, ...temasProntos])
             SizedBox(
               width: largura,
               child: _CartaoTema(
                   tema: t,
                   selecionado: t.id == selecionado,
-                  corTexto: c.tx,
                   aoTocar: () => aoEscolher(t.id)),
             ),
         ],
@@ -93,11 +89,9 @@ class _CartaoTema extends StatelessWidget {
   const _CartaoTema(
       {required this.tema,
       required this.selecionado,
-      required this.corTexto,
       required this.aoTocar});
   final TemaPronto tema;
   final bool selecionado;
-  final Color corTexto;
   final VoidCallback aoTocar;
 
   @override
@@ -144,7 +138,7 @@ class _CartaoTema extends StatelessWidget {
                       fontFamily: 'Geist',
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: corTexto)),
+                      color: c.tx)),
             ],
           ),
         ),
@@ -160,21 +154,20 @@ class _Miniatura extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (tema.id != 'sistema') return _Desenho(tema.cores);
+    // Cada metade mostra um desenho completo (largura dobrada) cortado ao meio.
+    Widget metade(EditorialCores c, AlignmentGeometry lado) => Expanded(
+        child: ClipRect(
+            child: LayoutBuilder(
+                builder: (_, box) => OverflowBox(
+                    alignment: lado,
+                    minWidth: box.maxWidth * 2,
+                    maxWidth: box.maxWidth * 2,
+                    child: _Desenho(c)))));
     return SizedBox(
       height: 76,
       child: Row(children: [
-        Expanded(
-            child: ClipRect(
-                child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    widthFactor: .5,
-                    child: _Desenho(temaPorId('padrao-claro').cores)))),
-        Expanded(
-            child: ClipRect(
-                child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    widthFactor: .5,
-                    child: _Desenho(temaPorId('padrao-escuro').cores)))),
+        metade(EditorialCores.claro, AlignmentDirectional.centerStart),
+        metade(EditorialCores.escuro, AlignmentDirectional.centerEnd),
       ]),
     );
   }

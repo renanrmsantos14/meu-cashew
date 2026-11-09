@@ -438,10 +438,7 @@ class SettingsPageContent extends StatelessWidget {
         SettingsContainerOpenPage(
           openPage: const AparenciaPage(),
           title: "Aparência",
-          description: temaPorId(appStateSettings["temaPronto"] is String
-                  ? appStateSettings["temaPronto"]
-                  : "sistema")
-              .nome,
+          description: temaPorId(idTemaSalvo()).nome,
           icon: appStateSettings["outlinedIcons"]
               ? Icons.palette_outlined
               : Icons.palette_rounded,
