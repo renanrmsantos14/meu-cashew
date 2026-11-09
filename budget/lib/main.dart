@@ -44,9 +44,14 @@ bool allowDangerousDebugFlags = kDebugMode;
 void main() async {
   captureLogs(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    // Fork sem google-services: falha do Firebase não pode derrubar o app.
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      print("Firebase indisponível: " + e.toString());
+    }
     await EasyLocalization.ensureInitialized();
     sharedPreferences = await SharedPreferences.getInstance();
     database = await constructDb('db');
