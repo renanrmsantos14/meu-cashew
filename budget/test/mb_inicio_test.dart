@@ -32,7 +32,7 @@ ModeloInicio _montar({List<Map<String, dynamic>>? contas, Map<String, dynamic>? 
             },
           ],
       faturas: faturas ?? {},
-      sincronizadoEm: '2026-11-09T17:48:00.000Z',
+      sincronizadoEm: _agora.subtract(const Duration(minutes: 12)).toUtc().toIso8601String(),
       ultimas: [
         (nome: 'Padaria', categoria: 'Alimentação', data: DateTime(2026, 11, 9), valor: -12.0, receita: false),
         (nome: 'Salário', categoria: 'Renda', data: DateTime(2026, 11, 8), valor: 100.0, receita: true),
