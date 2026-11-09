@@ -81,6 +81,8 @@ Future<bool> signInGoogle(
     bool? silentSignIn,
     Function()? next}) async {
   // bool isConnected = false;
+  // Meu Banco na web não usa Google (a CSP também bloqueia accounts.google.com).
+  if (kIsWeb) return false;
   if (await checkLockedFeatureIfInDemoMode(context) == false) return false;
   if (appStateSettings["emailScanning"] == false) gMailPermissions = false;
 

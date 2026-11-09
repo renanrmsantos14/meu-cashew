@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:budget/database/tables.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 Map<String, dynamic> currenciesJSON = {};
 
@@ -12,6 +13,8 @@ loadCurrencyJSON() async {
 }
 
 Future<bool> getExchangeRates() async {
+  // Na web a CSP só permite a própria origem; a conta única do Meu Banco é BRL.
+  if (kIsWeb) return false;
   print("Getting exchange rates for current wallets");
   // List<String?> uniqueCurrencies =
   //     await database.getUniqueCurrenciesFromWallets();
