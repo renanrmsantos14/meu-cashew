@@ -1,4 +1,6 @@
+import 'package:budget/struct/atualizador.dart';
 import 'package:budget/struct/meuBancoSync.dart';
+import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/button.dart';
 import 'package:budget/widgets/framework/pageFramework.dart';
 import 'package:budget/widgets/textInput.dart';
@@ -17,6 +19,8 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
       TextEditingController(text: meuBancoUrlPadrao);
   final TextEditingController _token = TextEditingController();
   bool _temToken = false;
+  bool _procurandoAtualizacao = false;
+  String? _msgAtualizacao;
 
   @override
   void initState() {
@@ -46,6 +50,19 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     _token.clear();
     await _carregar();
     await sincronizarMeuBanco();
+  }
+
+  Future<void> _procurarAtualizacao() async {
+    setState(() {
+      _procurandoAtualizacao = true;
+      _msgAtualizacao = null;
+    });
+    final msg = await atualizadorVerificarManual(context);
+    if (!mounted) return;
+    setState(() {
+      _procurandoAtualizacao = false;
+      _msgAtualizacao = msg.isEmpty ? null : msg;
+    });
   }
 
   String _formatar(DateTime d) {
@@ -153,6 +170,36 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
                 "Desconectar apaga o token e o ponto de sincronização. As transações já importadas continuam no app.",
             fontSize: 12,
             maxLines: 5,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 10),
+          child: Button(
+            label: _procurandoAtualizacao
+                ? "Procurando..."
+                : "Procurar atualização",
+            disabled: _procurandoAtualizacao,
+            expandedLayout: true,
+            onTap: _procurarAtualizacao,
+          ),
+        ),
+        if (_msgAtualizacao != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: TextFont(
+              text: _msgAtualizacao!,
+              fontSize: 14,
+              maxLines: 6,
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20, vertical: 5),
+          child: TextFont(
+            text: "Versão instalada: ${packageInfoGlobal?.version ?? ""}+${packageInfoGlobal?.buildNumber ?? ""}",
+            fontSize: 12,
           ),
         ),
       ],

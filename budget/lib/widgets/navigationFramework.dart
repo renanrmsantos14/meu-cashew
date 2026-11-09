@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:animations/animations.dart';
 import 'package:budget/colors.dart';
@@ -57,6 +58,7 @@ import 'package:budget/widgets/ratingPopup.dart';
 import 'package:budget/widgets/selectAmount.dart';
 import 'package:budget/widgets/selectChips.dart';
 import 'package:budget/widgets/selectedTransactionsAppBar.dart';
+import 'package:budget/struct/atualizador.dart';
 import 'package:budget/widgets/showChangelog.dart';
 import 'package:budget/struct/initializeNotifications.dart';
 import 'package:budget/widgets/globalLoadingProgress.dart';
@@ -311,6 +313,7 @@ Future<bool> runAllCloudFunctions(BuildContext context,
   try {
     loadingIndeterminateKey.currentState?.setVisibility(true);
     await sincronizarMeuBanco(); // nunca lança; erro fica na tela "Meu Banco"
+    unawaited(atualizadorVerificarAutomatico(context)); // não bloqueia a UI
     await runForceSignIn(context);
     await syncData(context);
     if (appStateSettings["emailScanningPullToRefresh"] ||

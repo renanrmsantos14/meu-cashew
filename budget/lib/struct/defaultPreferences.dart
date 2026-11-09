@@ -17,6 +17,7 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
   return {
     "databaseJustImported": false,
     "meuBancoDesde": null,
+    "atualizacaoOfertada": null,
     "backupLimit": 20,
     "backupSync": true,
     "syncEveryChange": kIsWeb,

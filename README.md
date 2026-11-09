@@ -45,6 +45,15 @@ Cashew is a full-fledged, feature-rich application designed to empower users in 
 
 ---
 
+## Atualizações
+
+Este fork (Meu Cashew) é distribuído por GitHub Releases, não pela Play Store.
+
+- Primeira instalação: baixe o `.apk` mais recente em [Releases](https://github.com/renanrmsantos14/meu-cashew/releases/latest) e instale manualmente (permita "instalar apps desconhecidos" para o navegador/gerenciador de arquivos).
+- Depois disso o app avisa quando houver versão nova ao abrir, e há o botão "Procurar atualização" em Configurações > Meu Banco.
+- Publicar versão: `scripts/nova-versao.sh 5.4.4+418` e depois o `git push origin HEAD v5.4.4+418` que o script imprime. O GitHub Actions compila, assina e publica a Release.
+- Secrets necessários no repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+
 ## Features
 
 <a href="https://www.youtube.com/watch?v=Oar9pkc7BSc&t=235s">

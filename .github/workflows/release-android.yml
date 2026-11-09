@@ -1,0 +1,67 @@
+name: Release Android
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: budget
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir tag x versão do pubspec
+        run: |
+          pubver=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | tr -d '\r')
+          if [ "v${pubver}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} difere do pubspec (v${pubver})"
+            exit 1
+          fi
+          echo "VERSAO=${pubver}" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      - name: Assinatura (keystore e key.properties)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$KS_PASS"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASS"
+          } > android/key.properties
+
+      - run: flutter pub get
+
+      - run: flutter test
+
+      - run: flutter build apk --release
+
+      - name: Renomear APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk "meu-cashew-${VERSAO}.apk"
+
+      - uses: softprops/action-gh-release@v2.0.8
+        with:
+          files: budget/meu-cashew-${{ env.VERSAO }}.apk
+          generate_release_notes: true
