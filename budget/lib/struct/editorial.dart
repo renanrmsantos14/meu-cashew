@@ -163,8 +163,9 @@ ThemeData temaEditorial(Brightness b) {
     fontFamily: 'Geist',
     fontFamilyFallback: const ['Inter'],
     scaffoldBackgroundColor: e.bg,
-    colorScheme: ColorScheme(
-      brightness: b,
+    // fromSeed preenche os papéis de container (primaryContainer, secondaryContainer…)
+    // usados pelas telas herdadas do Cashew; sem isso viram primário/branco.
+    colorScheme: ColorScheme.fromSeed(seedColor: e.acc, brightness: b).copyWith(
       primary: e.acc,
       onPrimary: claro ? Colors.white : e.bg,
       secondary: e.acc,
