@@ -4,6 +4,7 @@ import 'package:budget/database/tables.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:intl/intl.dart' show NumberFormat;
 
 typedef ContaInicio = ({String sigla, String nome, String tipo, double saldo});
@@ -41,6 +42,28 @@ class ModeloInicio {
   final List<CartaoInicio> cartoes;
   final List<UltimaInicio> ultimas;
   bool get semDados => contas.isEmpty && cartoes.isEmpty && porDia.isEmpty;
+
+  // Igualdade por conteúdo: permite ignorar recargas que não mudaram nada (sem setState).
+  @override
+  bool operator ==(Object o) =>
+      o is ModeloInicio &&
+      ciclo == o.ciclo &&
+      saudacao == o.saudacao &&
+      origemDisponivel == o.origemDisponivel &&
+      disponivel == o.disponivel &&
+      consumido == o.consumido &&
+      limite == o.limite &&
+      percentual == o.percentual &&
+      diasRestantes == o.diasRestantes &&
+      indiceHoje == o.indiceHoje &&
+      listEquals(porDia, o.porDia) &&
+      listEquals(contas, o.contas) &&
+      listEquals(cartoes, o.cartoes) &&
+      listEquals(ultimas, o.ultimas);
+
+  @override
+  int get hashCode => Object.hash(ciclo, saudacao, disponivel, consumido,
+      diasRestantes, indiceHoje, porDia.length, contas.length, ultimas.length);
 
   const ModeloInicio({
     required this.ciclo,
@@ -307,4 +330,31 @@ Future<({ModeloInicio modelo, List<({Transaction transaction, TransactionCategor
     agora: agora,
   );
   return (modelo: modelo, transacoes: txs);
+}
+
+// Junta gatilhos de recarga em rajada (uma sync dispara o listener da sync e vários eventos
+// do stream de transações): no máximo uma recarga em andamento e uma repetição pendente.
+class RecargaColapsada {
+  RecargaColapsada(this._carregar);
+  final Future<void> Function() _carregar;
+  bool _rodando = false, _repetir = false, _fechada = false;
+
+  Future<void> pedir() async {
+    if (_fechada) return;
+    if (_rodando) {
+      _repetir = true;
+      return;
+    }
+    _rodando = true;
+    try {
+      do {
+        _repetir = false;
+        await _carregar();
+      } while (_repetir && !_fechada);
+    } finally {
+      _rodando = false;
+    }
+  }
+
+  void fechar() => _fechada = true;
 }

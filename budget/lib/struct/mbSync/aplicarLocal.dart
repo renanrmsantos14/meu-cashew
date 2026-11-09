@@ -29,6 +29,37 @@ DateTime _proximoDia(int dia, DateTime hoje) {
       : deste;
 }
 
+// Leituras repetidas por registro, feitas uma vez por chamada de mbAplicarRegistros.
+// Só categorias mudam durante a aplicação (invalidadas em _categoria); carteiras não.
+class _Cache {
+  List<TransactionWallet>? _carteiras;
+  final Map<bool, String?> _primeira = {};
+  final Map<String, bool> _categoriaExiste = {};
+
+  Future<List<TransactionWallet>> carteiras() async =>
+      _carteiras ??= await database.select(database.wallets).get();
+
+  Future<String?> primeiraCategoria(bool receita) async {
+    if (!_primeira.containsKey(receita)) {
+      _primeira[receita] = await _primeiraCategoria(receita);
+    }
+    return _primeira[receita];
+  }
+
+  Future<bool> categoriaExiste(String pk) async =>
+      _categoriaExiste[pk] ??= await database.getCategoryInstanceOrNull(pk) != null;
+
+  void categoriasMudaram() {
+    _primeira.clear();
+    _categoriaExiste.clear();
+  }
+}
+
+Future<int> _contar(TableInfo tabela) async => (await database
+        .customSelect('SELECT COUNT(*) AS n FROM ${tabela.actualTableName}',
+            readsFrom: {tabela}).getSingle())
+    .read<int>('n');
+
 // Grava os registros remotos vencedores direto no Drift (sem createOrUpdate*, para não
 // gerar efeitos de orçamento compartilhado nem marcar a categoria como editada) e
 // atualiza o espelho. Inclusões na ordem de dependência; exclusões na ordem inversa.
@@ -43,6 +74,7 @@ Future<void> mbAplicarRegistros(
   final vivos = ordenados.where((r) => r.deletedAt == null);
   final mortos = ordenados.where((r) => r.deletedAt != null).toList().reversed;
   final novos = <Espelho>[];
+  final cache = _Cache();
   final semPrefixo = mbIdsSemPrefixo([
     for (final e in espelho.values) e.registro,
     ...vencedores,
@@ -53,7 +85,7 @@ Future<void> mbAplicarRegistros(
       final d = r.dados;
       if (d != null) {
         try {
-          p = await _aplicar(r, d, espelho, hoje);
+          p = await _aplicar(r, d, espelho, hoje, cache);
           if (p != null) p = mbReescreverIds(p, semPrefixo);
         } catch (e) {
           // Registro remoto inaplicável (dados fora do formato esperado): fica só no espelho.
@@ -71,29 +103,30 @@ Future<void> mbAplicarRegistros(
 }
 
 Future<Projetado?> _aplicar(Registro r, Map<String, dynamic> d,
-    Map<String, Espelho> espelho, DateTime hoje) async {
+    Map<String, Espelho> espelho, DateTime hoje, _Cache cache) async {
   final modificado = Value<DateTime?>(DateTime.parse(r.updatedAt).toLocal());
   switch (r.tabela) {
     case 'categorias':
-      return _categoria(r, d, modificado);
+      return _categoria(r, d, modificado, cache);
     case 'regras':
-      return _regra(r, d, espelho, modificado);
+      return _regra(r, d, espelho, modificado, cache);
     case 'orcamentos':
       return _orcamento(r, d, hoje, modificado);
     case 'metas':
     case 'dividas':
       return _objetivo(r, d, modificado);
     case 'lancamentos':
-      return _lancamento(r, d, modificado);
+      return _lancamento(r, d, modificado, cache);
     case 'assinaturas':
-      return _assinatura(r, d, hoje, modificado);
+      return _assinatura(r, d, hoje, modificado, cache);
   }
   return null;
 }
 
-Future<Projetado?> _categoria(
-    Registro r, Map<String, dynamic> d, Value<DateTime?> modificado) async {
+Future<Projetado?> _categoria(Registro r, Map<String, dynamic> d,
+    Value<DateTime?> modificado, _Cache cache) async {
   final c = categoriaDeDados(r.id, d);
+  cache.categoriasMudaram();
   final existente = await database.getCategoryInstanceOrNull(c.pk);
   final ordem = d['ordem'] != null
       ? c.ordem
@@ -113,9 +146,9 @@ Future<Projetado?> _categoria(
 }
 
 Future<Projetado?> _regra(Registro r, Map<String, dynamic> d,
-    Map<String, Espelho> espelho, Value<DateTime?> modificado) async {
+    Map<String, Espelho> espelho, Value<DateTime?> modificado, _Cache cache) async {
   final g = regraDeDados(r.id, d);
-  if (g == null || await database.getCategoryInstanceOrNull(g.categoriaPk) == null) {
+  if (g == null || !await cache.categoriaExiste(g.categoriaPk)) {
     return null;
   }
   final existente = await (database.select(database.associatedTitles)
@@ -128,7 +161,7 @@ Future<Projetado?> _regra(Registro r, Map<String, dynamic> d,
         title: Value(g.titulo),
         isExactMatch: Value(g.exato),
         order: Value(existente?.order ??
-            (await database.select(database.associatedTitles).get()).length),
+            await _contar(database.associatedTitles)),
         dateTimeModified: modificado,
       ));
   final gravado = await (database.select(database.associatedTitles)
@@ -158,7 +191,7 @@ Future<Projetado?> _orcamento(Registro r, Map<String, dynamic> d, DateTime hoje,
         reoccurrence: Value(existente?.reoccurrence ?? BudgetReoccurence.monthly),
         colour: Value(existente?.colour),
         order: Value(existente?.order ??
-            (await database.select(database.budgets).get()).length),
+            await _contar(database.budgets)),
         walletFk: Value(existente?.walletFk ?? '0'),
         dateTimeModified: modificado,
       ));
@@ -182,7 +215,7 @@ Future<Projetado?> _objetivo(
         income: Value(o.receita),
         endDate: Value(o.prazo),
         order: Value(existente?.order ??
-            (await database.select(database.objectives).get()).length),
+            await _contar(database.objectives)),
         walletFk: Value(existente?.walletFk ?? '0'),
         dateTimeModified: modificado,
       ));
@@ -200,18 +233,18 @@ Future<String?> _primeiraCategoria(bool receita) async {
   return l.isEmpty ? null : l.first.categoryPk;
 }
 
-Future<Projetado?> _lancamento(
-    Registro r, Map<String, dynamic> d, Value<DateTime?> modificado) async {
+Future<Projetado?> _lancamento(Registro r, Map<String, dynamic> d,
+    Value<DateTime?> modificado, _Cache cache) async {
   final valor = (d['valor'] as num).toDouble();
   final receita = valor > 0;
-  final padrao = await _primeiraCategoria(receita);
+  final padrao = await cache.primeiraCategoria(receita);
   final l = lancamentoDeDados(r.id, d, categoriaPadrao: padrao ?? '');
   var categoria = l.categoriaPk;
-  if (await database.getCategoryInstanceOrNull(categoria) == null) {
+  if (!await cache.categoriaExiste(categoria)) {
     if (padrao == null) return null;
     categoria = padrao;
   }
-  final carteiras = await database.select(database.wallets).get();
+  final carteiras = await cache.carteiras();
   final carteira = carteiras
           .where((w) => w.name == l.carteiraNome)
           .map((w) => w.walletPk)
@@ -242,12 +275,12 @@ Future<Projetado?> _lancamento(
 }
 
 Future<Projetado?> _assinatura(Registro r, Map<String, dynamic> d, DateTime hoje,
-    Value<DateTime?> modificado) async {
-  final padrao = await _primeiraCategoria(false);
+    Value<DateTime?> modificado, _Cache cache) async {
+  final padrao = await cache.primeiraCategoria(false);
   final a = assinaturaDeDados(r.id, d, categoriaPadrao: padrao ?? '');
   if (a == null) return null;
   var categoria = a.categoriaPk;
-  if (await database.getCategoryInstanceOrNull(categoria) == null) {
+  if (!await cache.categoriaExiste(categoria)) {
     if (padrao == null) return null;
     categoria = padrao;
   }

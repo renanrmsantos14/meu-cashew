@@ -14,6 +14,7 @@ import 'package:budget/widgets/editorial/layoutDesktop.dart';
 import 'package:budget/widgets/editorial/movimento.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/globalSnackbar.dart' show SnackbarMessage;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -81,6 +82,7 @@ class _PainelDesktopState extends State<PainelDesktop> {
   List<OrcamentoPainel> _orcamentos = const [];
   bool _atualizando = false;
   StreamSubscription<void>? _assinatura;
+  late final RecargaColapsada _recarga = RecargaColapsada(_carregar);
 
   @override
   void initState() {
@@ -91,16 +93,17 @@ class _PainelDesktopState extends State<PainelDesktop> {
       _orcamentos = widget._orcamentos;
       _publicarLista();
     } else {
-      meuBancoUltimaSync.addListener(_carregar);
-      _assinatura = mbMudouUltimas().listen((_) => _carregar());
-      _carregar();
+      meuBancoUltimaSync.addListener(_recarga.pedir);
+      // O 1º evento do stream já faz a carga inicial (sem corrida com uma gravação entre duas leituras).
+      _assinatura = mbMudouUltimas().listen((_) => _recarga.pedir());
     }
   }
 
   @override
   void dispose() {
-    meuBancoUltimaSync.removeListener(_carregar);
+    meuBancoUltimaSync.removeListener(_recarga.pedir);
     _assinatura?.cancel();
+    _recarga.fechar();
     mbListaVisivel.value = const [];
     super.dispose();
   }
@@ -117,6 +120,11 @@ class _PainelDesktopState extends State<PainelDesktop> {
     if (!mounted) return;
     final orc = await mbCarregarOrcamentos(context);
     if (!mounted) return;
+    if (r.modelo == _modelo &&
+        listEquals(r.transacoes, _transacoes) &&
+        listEquals(orc, _orcamentos)) {
+      return;
+    }
     setState(() {
       _modelo = r.modelo;
       _transacoes = r.transacoes;

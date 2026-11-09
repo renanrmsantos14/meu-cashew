@@ -7,6 +7,11 @@ import 'package:path/path.dart' as p;
 import 'package:drift/drift.dart';
 import 'dart:io';
 
+// Uma única conexão em isolate de segundo plano para leitura e escrita: o SQLite
+// (selects e streams de toda tela) não roda mais na thread de UI.
+QueryExecutor abrirExecutorNativo(File file, {IsolateSetup? isolateSetup}) =>
+    NativeDatabase.createInBackground(file, isolateSetup: isolateSetup);
+
 Future<FinanceDatabase> constructDb(String dbName,
     {Uint8List? initialDataWeb}) async {
   // the LazyDatabase util lets us find the right location for the file async.
@@ -15,10 +20,7 @@ Future<FinanceDatabase> constructDb(String dbName,
     // for your app.
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, dbName + '.sqlite'));
-    // return NativeDatabase(file);
-    QueryExecutor foregroundExecutor = NativeDatabase(file);
-    QueryExecutor backgroundExecutor = NativeDatabase.createInBackground(file);
-    return MultiExecutor(read: foregroundExecutor, write: backgroundExecutor);
+    return abrirExecutorNativo(file);
   });
   return FinanceDatabase(db);
 }

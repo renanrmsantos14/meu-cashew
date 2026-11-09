@@ -53,14 +53,20 @@ void main() async {
             await rootBundle.loadString('assets/fonts/$f'));
       }
     });
-    await EasyLocalization.ensureInitialized();
+    // Independentes entre si: rodam juntas. Só initializeSettings precisa de
+    // sharedPreferences e database, então espera os dois.
+    final inicioIndependente = Future.wait<void>([
+      EasyLocalization.ensureInitialized(),
+      initializeNotifications().then((p) => notificationPayload = p),
+      loadCurrencyJSON(),
+      loadLanguageNamesJSON(),
+    ])
+      ..ignore(); // o erro é relançado no await abaixo, não antes como não tratado
     sharedPreferences = await SharedPreferences.getInstance();
     database = await constructDb('db');
-    notificationPayload = await initializeNotifications();
     entireAppLoaded = false;
-    await loadCurrencyJSON();
-    await loadLanguageNamesJSON();
     await initializeSettings();
+    await inicioIndependente;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       try {
         await mbRegistrarSegundoPlano();
