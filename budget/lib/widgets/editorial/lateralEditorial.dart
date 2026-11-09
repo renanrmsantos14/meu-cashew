@@ -35,19 +35,18 @@ Future<({List<ContaLateral> contas, DateTime? sincronizadoEm})>
   return (
     contas: [
       for (final c in lista)
-        if (c is Map)
-          (id: '${c['id']}', nome: '${c['bank'] ?? c['name']}')
+        if (c is Map) (id: '${c['id']}', nome: '${c['bank'] ?? c['name']}')
     ],
     sincronizadoEm: sinc == null ? null : DateTime.tryParse(sinc)
   );
 }
 
 class LateralEditorial extends StatefulWidget {
-  const LateralEditorial({super.key}) : _contas = null, _sincronizadoEm = null;
+  const LateralEditorial({super.key})
+      : _contas = null,
+        _sincronizadoEm = null;
   const LateralEditorial.comDados(
-      {super.key,
-      required List<ContaLateral> contas,
-      DateTime? sincronizadoEm})
+      {super.key, required List<ContaLateral> contas, DateTime? sincronizadoEm})
       : _contas = contas,
         _sincronizadoEm = sincronizadoEm;
 
@@ -170,7 +169,10 @@ class _LateralEditorialState extends State<LateralEditorial> {
 
 class _ItemNavegacao extends StatelessWidget {
   const _ItemNavegacao(
-      {this.icone, required this.rotulo, required this.ativo, required this.onTap});
+      {this.icone,
+      required this.rotulo,
+      required this.ativo,
+      required this.onTap});
   final IconData? icone;
   final String rotulo;
   final bool ativo;

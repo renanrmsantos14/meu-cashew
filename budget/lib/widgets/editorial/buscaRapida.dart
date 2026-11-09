@@ -9,18 +9,23 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-typedef ResultadoBusca = ({String pk, String nome, String quando, double valor, bool receita});
+typedef ResultadoBusca = ({
+  String pk,
+  String nome,
+  String quando,
+  double valor,
+  bool receita
+});
 
 const int _limiteBusca = 20;
 
 Future<List<ResultadoBusca>> mbBuscarTransacoes(String q) async {
   final t = database.transactions;
   final linhas = await (database.select(t)
-        ..where((x) =>
-            database.onlyShowTransactionBasedOnSearchQuery(x, q,
-                withCategories: false,
-                joinedWithSubcategoriesTable: null,
-                joinedWithObjectiveLoans: null))
+        ..where((x) => database.onlyShowTransactionBasedOnSearchQuery(x, q,
+            withCategories: false,
+            joinedWithSubcategoriesTable: null,
+            joinedWithObjectiveLoans: null))
         ..orderBy([(x) => OrderingTerm.desc(x.dateCreated)])
         ..limit(_limiteBusca))
       .get();
@@ -59,7 +64,8 @@ Future<void> abrirBuscaRapida(
 }
 
 class _Item {
-  const _Item(this.rotulo, this.detalhe, this.abrir, {this.valor, this.receita = false});
+  const _Item(this.rotulo, this.detalhe, this.abrir,
+      {this.valor, this.receita = false});
   final String rotulo;
   final String detalhe;
   final VoidCallback abrir;
@@ -187,8 +193,8 @@ class _BuscaRapidaState extends State<BuscaRapida> {
                     onSubmitted: (_) => _abrirSelecionado(),
                     decoration: InputDecoration(
                       hintText: 'Buscar ou ir para…',
-                      hintStyle: EdTexto.corpo(context).copyWith(
-                          fontSize: 16, color: e.mu),
+                      hintStyle: EdTexto.corpo(context)
+                          .copyWith(fontSize: 16, color: e.mu),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.all(16),
                     ),
@@ -237,7 +243,8 @@ class _LinhaBusca extends StatelessWidget {
         decoration: BoxDecoration(
           color: ativa ? e.chip : null,
           border: Border(
-              left: BorderSide(color: ativa ? e.acc : Colors.transparent, width: 2)),
+              left: BorderSide(
+                  color: ativa ? e.acc : Colors.transparent, width: 2)),
         ),
         child: Row(
           children: [

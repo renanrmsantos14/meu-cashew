@@ -101,11 +101,14 @@ class _PainelDesktopState extends State<PainelDesktop> {
   void dispose() {
     meuBancoUltimaSync.removeListener(_carregar);
     _assinatura?.cancel();
+    mbListaVisivel.value = const [];
     super.dispose();
   }
 
   void _publicarLista() {
-    mbListaVisivel.value = [for (final t in _transacoes) t.transaction.transactionPk];
+    mbListaVisivel.value = [
+      for (final t in _transacoes) t.transaction.transactionPk
+    ];
   }
 
   Future<void> _carregar() async {
@@ -140,7 +143,10 @@ class _PainelDesktopState extends State<PainelDesktop> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(36, 28, 36, 40),
               children: [
-                _Topo(modelo: m, atualizando: _atualizando, onAtualizar: _atualizar),
+                _Topo(
+                    modelo: m,
+                    atualizando: _atualizando,
+                    onAtualizar: _atualizar),
                 const SizedBox(height: 28),
                 if (m.semDados)
                   Text('Ainda sem dados. Use Atualizar.',
@@ -178,7 +184,9 @@ class _PainelDesktopState extends State<PainelDesktop> {
 
 class _Topo extends StatelessWidget {
   const _Topo(
-      {required this.modelo, required this.atualizando, required this.onAtualizar});
+      {required this.modelo,
+      required this.atualizando,
+      required this.onAtualizar});
   final ModeloInicio modelo;
   final bool atualizando;
   final VoidCallback onAtualizar;
@@ -202,33 +210,42 @@ class _Topo extends StatelessWidget {
             ],
           ),
         ),
-        Semantics(
-          button: true,
-          label: 'Buscar ou ir para',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => abrirBuscaRapida(),
-            child: SizedBox(
-              width: 260,
-              height: 44,
-              child: Center(
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                      color: e.surf,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: e.line)),
-                  child: Row(
-                    children: [
-                      Icon(Icons.search, size: 16, color: e.mu),
-                      const SizedBox(width: 8),
-                      Expanded(
-                          child: Text('Buscar ou ir para…',
-                              style: EdTexto.corpo(context)
-                                  .copyWith(color: e.mu, fontSize: 13))),
-                      Text('Ctrl K', style: EdTexto.mono(context)),
-                    ],
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 260),
+              child: Semantics(
+                button: true,
+                label: 'Buscar ou ir para',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => abrirBuscaRapida(),
+                  child: SizedBox(
+                    height: 44,
+                    child: Center(
+                      child: Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                            color: e.surf,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: e.line)),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search, size: 16, color: e.mu),
+                            const SizedBox(width: 8),
+                            Expanded(
+                                child: Text('Buscar ou ir para…',
+                                    overflow: TextOverflow.clip,
+                                    maxLines: 1,
+                                    style: EdTexto.corpo(context)
+                                        .copyWith(color: e.mu, fontSize: 13))),
+                            Text('Ctrl K', style: EdTexto.mono(context)),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -279,8 +296,7 @@ class _Disponivel extends StatelessWidget {
         const SizedBox(height: 6),
         Row(
           children: [
-            Expanded(
-                child: Text(pontas.first, style: EdTexto.mono(context))),
+            Expanded(child: Text(pontas.first, style: EdTexto.mono(context))),
             Text('Gasto por dia', style: EdTexto.rotulo(context)),
             Expanded(
                 child: Text(pontas.length > 1 ? pontas.last : '',
@@ -301,7 +317,8 @@ class _GastoCiclo extends StatelessWidget {
     final e = cores(context);
     final m = modelo;
     final limite = m.limite;
-    final pct = m.percentual ?? (limite != null && limite > 0 ? m.consumido / limite * 100 : null);
+    final pct = m.percentual ??
+        (limite != null && limite > 0 ? m.consumido / limite * 100 : null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -318,9 +335,15 @@ class _GastoCiclo extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${(pct ?? 0).round()}% do previsto',
-                  style: EdTexto.rotulo(context)),
-              Text('Previsto ${brl(limite)}', style: EdTexto.rotulo(context)),
+              Flexible(
+                  child: Text('${(pct ?? 0).round()}% do previsto',
+                      overflow: TextOverflow.ellipsis,
+                      style: EdTexto.rotulo(context))),
+              const SizedBox(width: 8),
+              Flexible(
+                  child: Text('Previsto ${brl(limite)}',
+                      overflow: TextOverflow.ellipsis,
+                      style: EdTexto.rotulo(context))),
             ],
           ),
         ] else
@@ -374,7 +397,8 @@ class _Cartao extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text('Fatura ${brl(c.fatura)}',
-            style: EdTexto.corpo(context).copyWith(fontWeight: FontWeight.w500)),
+            style:
+                EdTexto.corpo(context).copyWith(fontWeight: FontWeight.w500)),
         if (c.limite != null) ...[
           const SizedBox(height: 8),
           MedidorEditorial(fracao: c.fatura / c.limite!, alerta: alto),
@@ -412,7 +436,8 @@ class _Tabela extends StatelessWidget {
                         style: EdTexto.rotulo(context).copyWith(color: e.acc)),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: e.line)),
@@ -426,8 +451,12 @@ class _Tabela extends StatelessWidget {
         ),
         Row(
           children: [
-            Expanded(flex: 5, child: Text('DESCRIÇÃO', style: EdTexto.mono(context))),
-            Expanded(flex: 3, child: Text('CATEGORIA', style: EdTexto.mono(context))),
+            Expanded(
+                flex: 5,
+                child: Text('DESCRIÇÃO', style: EdTexto.mono(context))),
+            Expanded(
+                flex: 3,
+                child: Text('CATEGORIA', style: EdTexto.mono(context))),
             Expanded(
                 flex: 3,
                 child: Text('VALOR',
@@ -439,7 +468,8 @@ class _Tabela extends StatelessWidget {
         if (transacoes.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text('Nenhuma transação ainda.', style: EdTexto.rotulo(context)),
+            child: Text('Nenhuma transação ainda.',
+                style: EdTexto.rotulo(context)),
           ),
         for (final t in transacoes)
           ValueListenableBuilder<String?>(

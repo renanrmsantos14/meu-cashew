@@ -22,14 +22,14 @@ Map<Type, Action<Intent>> keyboardIntents = {
   AbrirBuscaIntent: CallbackAction<AbrirBuscaIntent>(
     onInvoke: (AbrirBuscaIntent intent) => abrirBuscaRapida(),
   ),
-  MudarCategoriaIntent: _AcaoDesktop<MudarCategoriaIntent>(
-      () => mbAcaoMudarCategoria?.call()),
-  VerTransacoesIntent: _AcaoDesktop<VerTransacoesIntent>(
-      () => mbIrParaPagina(1)),
-  ProximaTransacaoIntent: _AcaoDesktop<ProximaTransacaoIntent>(
-      () => mbSelecionarVizinha(1)),
-  AnteriorTransacaoIntent: _AcaoDesktop<AnteriorTransacaoIntent>(
-      () => mbSelecionarVizinha(-1)),
+  MudarCategoriaIntent:
+      _AcaoDesktop<MudarCategoriaIntent>(() => mbAcaoMudarCategoria?.call()),
+  VerTransacoesIntent:
+      _AcaoDesktop<VerTransacoesIntent>(() => mbIrParaPagina(1)),
+  ProximaTransacaoIntent:
+      _AcaoDesktop<ProximaTransacaoIntent>(() => mbSelecionarVizinha(1)),
+  AnteriorTransacaoIntent:
+      _AcaoDesktop<AnteriorTransacaoIntent>(() => mbSelecionarVizinha(-1)),
   AtualizarIntent: CallbackAction<AtualizarIntent>(
     onInvoke: (AtualizarIntent intent) => mbAtualizarComAviso(),
   ),
@@ -97,6 +97,7 @@ class _AcaoDesktop<T extends Intent> extends CallbackAction<T> {
   bool isEnabled(T intent) {
     final ctx = navigatorKey.currentContext;
     if (ctx == null || !ehDesktop(ctx)) return false;
+    if (navigatorKey.currentState?.canPop() ?? false) return false;
     final foco = FocusManager.instance.primaryFocus?.context;
     return foco == null ||
         (foco.widget is! EditableText &&

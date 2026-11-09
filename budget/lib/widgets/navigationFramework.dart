@@ -1,4 +1,4 @@
-import 'package:budget/widgets/editorial/layoutDesktop.dart' show mbPaginaAtual;
+import 'package:budget/widgets/editorial/layoutDesktop.dart' show mbPaginaAtual, ObservadorPaginas;
 import 'dart:async';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:animations/animations.dart';
@@ -89,6 +89,7 @@ class InitialPageRouteNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Navigator(
       key: navigatorKey,
+      observers: [ObservadorPaginas()],
       onGenerateRoute: (settings) => PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             AnimatedSwitcher(

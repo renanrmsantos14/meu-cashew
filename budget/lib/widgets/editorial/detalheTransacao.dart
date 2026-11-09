@@ -63,8 +63,18 @@ String mbNormalizarDescricao(String s) => s
     .trim();
 
 const _meses = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez'
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez'
 ];
 String _dataHora(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')} ${_meses[d.month - 1]} ${d.year} · '
@@ -99,8 +109,8 @@ Future<DetalheModelo?> mbCarregarDetalhe(String pk) async {
   RegraDetalhe? regra;
   if (ehMb && contaId != null) {
     final espelho = await mbLerEspelho();
-    final ctx = MbContextoCategoria.deRegistros(
-        espelho.values.map((e) => e.registro));
+    final ctx =
+        MbContextoCategoria.deRegistros(espelho.values.map((e) => e.registro));
     final ef = mbCategoriaEfetiva(
         txId: pk.substring(mbPrefixo.length),
         contaId: contaId,
@@ -217,8 +227,16 @@ class ChipCategoria extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = cores(context);
-    final fundo = alerta ? e.warnbg : receita ? e.pos.withOpacity(.12) : e.chip;
-    final cor = alerta ? e.warntx : receita ? e.pos : e.acc;
+    final fundo = alerta
+        ? e.warnbg
+        : receita
+            ? e.pos.withOpacity(.12)
+            : e.chip;
+    final cor = alerta
+        ? e.warntx
+        : receita
+            ? e.pos
+            : e.acc;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration:
@@ -237,7 +255,10 @@ class ChipCategoria extends StatelessWidget {
 
 class DetalheTransacao extends StatefulWidget {
   const DetalheTransacao(
-      {super.key, required this.pk, required this.carregar, this.aoMudarCategoria});
+      {super.key,
+      required this.pk,
+      required this.carregar,
+      this.aoMudarCategoria});
   final String pk;
   final Future<DetalheModelo?> Function(String pk) carregar;
   final Future<void> Function(DetalheModelo)? aoMudarCategoria;
@@ -363,10 +384,12 @@ class _DetalheTransacaoState extends State<DetalheTransacao> {
                         children: [
                           SizedBox(
                               width: 96,
-                              child: Text(l.$1, style: EdTexto.rotulo(context))),
+                              child:
+                                  Text(l.$1, style: EdTexto.rotulo(context))),
                           Expanded(
                               child: Align(
-                                  alignment: Alignment.centerLeft, child: l.$2)),
+                                  alignment: Alignment.centerLeft,
+                                  child: l.$2)),
                         ],
                       ),
                     ),
@@ -465,8 +488,8 @@ class _DetalheTransacaoState extends State<DetalheTransacao> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('${r.padrao} → ${r.categoria}',
-              style: EdTexto.corpo(context)
-                  .copyWith(fontWeight: FontWeight.w500)),
+              style:
+                  EdTexto.corpo(context).copyWith(fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
           Text(
               'Aplicada a ${r.aplicadaA} ${r.aplicadaA == 1 ? 'transação' : 'transações'}',

@@ -9,13 +9,45 @@ const double mbLarguraDesktop = 1100;
 const double mbLarguraLateral = 232;
 const double mbLarguraDetalhe = 360;
 
-bool ehDesktop(BuildContext c) => MediaQuery.sizeOf(c).width >= mbLarguraDesktop;
+bool ehDesktop(BuildContext c) =>
+    MediaQuery.sizeOf(c).width >= mbLarguraDesktop;
 
 // transactionPk da transação com o detalhe aberto na coluna 3.
 final ValueNotifier<String?> mbTransacaoSelecionada = ValueNotifier(null);
 
 // Índice da página do PageNavigationFramework que está em primeiro plano (marca o item ativo da lateral).
 final ValueNotifier<int> mbPaginaAtual = ValueNotifier(0);
+
+// Há página empilhada cobrindo a lateral (a versão do canto precisa reaparecer).
+final ValueNotifier<bool> mbRotaEmpilhada = ValueNotifier(false);
+
+// Conta páginas empilhadas (PageRoute acima da raiz) de um Navigator; diálogos não contam.
+class ObservadorPaginas extends NavigatorObserver {
+  static int _total = 0;
+
+  void _mudou(int delta) {
+    _total = (_total + delta).clamp(0, 1 << 20);
+    Future.microtask(() => mbRotaEmpilhada.value = _total > 0);
+  }
+
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    if (route is PageRoute && previousRoute != null) _mudou(1);
+  }
+
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    if (route is PageRoute) _mudou(-1);
+  }
+
+  @override
+  void didRemove(Route route, Route? previousRoute) {
+    if (route is PageRoute && previousRoute != null) _mudou(-1);
+  }
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {}
+}
 
 // transactionPk das transações visíveis na ordem da tela, para J/K.
 final ValueNotifier<List<String>> mbListaVisivel = ValueNotifier(const []);
@@ -28,6 +60,7 @@ void mbIrParaPagina(int pagina) {
 }
 
 void mbSelecionarVizinha(int passo) {
+  if (mbPaginaAtual.value != 0) return;
   final lista = mbListaVisivel.value;
   if (lista.isEmpty) return;
   final i = lista.indexOf(mbTransacaoSelecionada.value ?? '');
