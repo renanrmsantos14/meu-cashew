@@ -28,8 +28,14 @@ class _MeuBancoParearPageState extends State<MeuBancoParearPage> {
   Future<void> _usar(MbPareamento p) async {
     if (_concluido) return;
     _concluido = true;
-    Navigator.of(context).pop();
-    await mbParear(p);
+    final ok = await mbConfirmarEParear(context, p);
+    if (!mounted) return;
+    if (ok) {
+      _link.clear();
+      Navigator.of(context).pop();
+    } else {
+      _concluido = false;
+    }
   }
 
   void _aoDetectar(BarcodeCapture captura) {
@@ -77,7 +83,17 @@ class _MeuBancoParearPageState extends State<MeuBancoParearPage> {
             borderRadius: BorderRadius.circular(16),
             child: SizedBox(
               height: 320,
-              child: MobileScanner(onDetect: _aoDetectar),
+              child: MobileScanner(
+                onDetect: _aoDetectar,
+                errorBuilder: (context, erro, _) => Center(
+                  child: TextFont(
+                    text:
+                        "Não foi possível abrir a câmera. Verifique a permissão ou use \"Colar link\".",
+                    fontSize: 14,
+                    maxLines: 4,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

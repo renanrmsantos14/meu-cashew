@@ -280,7 +280,7 @@ Future executeAppLink(BuildContext? context, Uri uri,
   if (uri.scheme == 'meubanco') {
     final p = mbLerLinkPareamento(uri);
     if (p != null) {
-      await mbParear(p);
+      await mbConfirmarEParear(context ?? navigatorKey.currentContext, p);
     } else {
       openSnackbar(SnackbarMessage(title: "Link de pareamento inválido"));
     }

@@ -2,7 +2,14 @@ import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/globalSnackbar.dart';
+import 'package:budget/database/tables.dart';
+import 'package:budget/functions.dart';
+import 'package:budget/struct/databaseGlobal.dart';
+import 'package:budget/struct/meuBancoMapping.dart';
+import 'package:budget/widgets/navigationFramework.dart';
+import 'package:budget/widgets/openPopup.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show BuildContext, Icons;
 
 class MbPareamento {
   final String base;
@@ -33,11 +40,64 @@ MbPareamento? mbLerLinkPareamento(Uri uri) {
   return MbPareamento(u.replaceAll(RegExp(r'/+$'), ''), t);
 }
 
-// Cursor zerado: o próximo pull é completo (o LWW resolve o que já existe).
-Future<void> mbParear(MbPareamento p) async {
-  await meuBancoSalvarConfig(token: p.token, url: p.base);
+// Conta nova: apaga o espelho, a fila, o estado e o que foi importado da conta anterior.
+// O que nasceu no Cashew fica e é reenviado como novo, porque o espelho está vazio.
+Future<void> mbTrocarConta() async {
   await mbCriarTabelas();
-  await mbRemoverEstado('cursor');
+  await database.transaction(() async {
+    await database.customStatement('DELETE FROM mb_registros');
+    await database.customStatement('DELETE FROM mb_aplicado');
+    await database.customStatement('DELETE FROM mb_estado');
+    await database.customStatement(
+        'DELETE FROM transactions WHERE transaction_pk LIKE ?', ['$mbPrefixo%']);
+  });
+}
+
+Future<bool> _contaDiferente(MbPareamento p) async =>
+    await meuBancoLerUrl() != p.base;
+
+// Grava o pareamento. Só chamar depois da confirmação do usuário.
+Future<void> mbParear(MbPareamento p) async {
+  try {
+    if (await _contaDiferente(p)) await mbTrocarConta();
+    await meuBancoSalvarConfig(token: p.token, url: p.base);
+    await mbCriarTabelas();
+    await mbRemoverEstado('cursor');
+  } catch (e) {
+    if (kDebugMode) debugPrint("Meu Banco: falha ao parear: $e");
+    openSnackbar(SnackbarMessage(title: "Não foi possível salvar o pareamento."));
+    return;
+  }
   openSnackbar(SnackbarMessage(title: "Pareado com ${Uri.parse(p.base).host}"));
-  await sincronizarMeuBanco();
+  if (!await sincronizarMeuBanco() && meuBancoUltimoErro.value != null) {
+    openSnackbar(SnackbarMessage(title: meuBancoUltimoErro.value!));
+  }
+}
+
+// Nunca grava um pareamento sem o usuário ver o host. Retorna true se confirmou e pareou.
+Future<bool> mbConfirmarEParear(BuildContext? context, MbPareamento p) async {
+  final ctx = context ?? navigatorKey.currentContext;
+  final host = Uri.parse(p.base).host;
+  final jaPareado = (await meuBancoLerToken())?.isNotEmpty == true;
+  final trocaConta = await _contaDiferente(p);
+  final avisos = [
+    "Só continue se o endereço for o do seu painel do Meu Banco.",
+    if (jaPareado)
+      "O pareamento atual será substituído.",
+    if (trocaConta)
+      "Os dados importados da conta anterior serão removidos deste aparelho. O que você criou no Cashew continua.",
+  ];
+  final confirmou = await openPopup<bool>(
+    ctx,
+    title: "Parear com $host?",
+    description: avisos.join("\n\n"),
+    icon: Icons.link_rounded,
+    onSubmitLabel: "Parear",
+    onSubmit: () => popRoute(ctx, true),
+    onCancelLabel: "Cancelar",
+    onCancel: () => popRoute(ctx, false),
+  );
+  if (confirmou != true) return false;
+  await mbParear(p);
+  return true;
 }

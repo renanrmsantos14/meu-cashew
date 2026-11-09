@@ -31,7 +31,7 @@ class MbCliente {
   Uri _uri(String caminho, [Map<String, String>? query]) {
     final uri = Uri.parse(base + caminho)
         .replace(queryParameters: query == null || query.isEmpty ? null : query);
-    final local = uri.host == 'localhost' || uri.host == '127.0.0.1';
+    final local = uri.host == 'localhost' || uri.host == '127.0.0.1' || uri.host == '10.0.2.2';
     // O token nunca sai por conexão sem criptografia (http só em depuração, para o Worker local).
     if (uri.scheme != 'https' && !kIsWeb && !(kDebugMode && local)) {
       throw 'O endereço do Meu Banco precisa começar com https://';

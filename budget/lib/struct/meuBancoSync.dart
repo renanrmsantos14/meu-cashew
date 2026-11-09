@@ -37,7 +37,7 @@ Future<String?> meuBancoLerToken() async {
   try {
     return await _storage.read(key: _chaveToken);
   } catch (e) {
-    debugPrint("Meu Banco: falha ao ler o token do armazenamento seguro: $e");
+    if (kDebugMode) debugPrint("Meu Banco: falha ao ler o token do armazenamento seguro: $e");
     return null;
   }
 }
@@ -47,7 +47,7 @@ Future<String> meuBancoLerUrl() async {
     final u = await _storage.read(key: _chaveUrl);
     if (u != null && u.trim().isNotEmpty) return u.trim();
   } catch (e) {
-    debugPrint("Meu Banco: falha ao ler a URL do armazenamento seguro: $e");
+    if (kDebugMode) debugPrint("Meu Banco: falha ao ler a URL do armazenamento seguro: $e");
   }
   return meuBancoUrlPadrao;
 }
@@ -77,7 +77,7 @@ Future<void> meuBancoAtualizarFila() async {
     await mbCriarTabelas();
     meuBancoFila.value = await mbLerFila();
   } catch (e) {
-    debugPrint("Meu Banco: falha ao ler a fila: $e");
+    if (kDebugMode) debugPrint("Meu Banco: falha ao ler a fila: $e");
   }
 }
 
@@ -184,9 +184,11 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
   } on TimeoutException {
     meuBancoUltimoErro.value = "Tempo esgotado ao falar com o Meu Banco.";
   } on http.ClientException catch (e) {
-    meuBancoUltimoErro.value = "Sem conexão com o Meu Banco: " + e.message;
+    if (kDebugMode) debugPrint("Meu Banco: ClientException: ${e.message}");
+    meuBancoUltimoErro.value = "Sem conexão com o Meu Banco.";
   } catch (e) {
-    meuBancoUltimoErro.value = e.toString();
+    if (kDebugMode) debugPrint("Meu Banco: falha na sincronização: $e");
+    meuBancoUltimoErro.value = "Não foi possível sincronizar agora.";
   } finally {
     meuBancoSincronizando.value = false;
     await meuBancoAtualizarFila();
@@ -293,6 +295,7 @@ Future<String> meuBancoAtualizar() async {
   } on http.ClientException {
     return "Sem conexão com o Meu Banco.";
   } catch (e) {
-    return "$e";
+    if (kDebugMode) debugPrint("Meu Banco: falha ao atualizar: $e");
+    return "Não foi possível atualizar agora.";
   }
 }

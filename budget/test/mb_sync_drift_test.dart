@@ -5,6 +5,7 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/pareamento.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
@@ -280,5 +281,25 @@ void main() {
     cliente.enviados.clear();
     await sync();
     expect(cliente.enviados, isEmpty);
+  });
+
+  test('trocar de conta apaga o espelho e o importado, e reenvia o que é do Cashew', () async {
+    await _categoria('c1', 'Mercado');
+    cliente.extra = banco();
+    await sync();
+    expect((await _txs()).map((t) => t.transactionPk), contains('mb:t1'));
+    expect(cliente.enviados.where((r) => r.id == 'cashew:c1'), isNotEmpty);
+
+    await mbTrocarConta();
+    expect((await _txs()).where((t) => t.transactionPk.startsWith('mb:')), isEmpty);
+    expect(await mbLerEspelho(), isEmpty);
+    expect(await mbLerAplicado(), isEmpty);
+    expect(await mbLerEstado('cursor'), isNull);
+    expect(await database.getCategoryInstanceOrNull('c1'), isNotNull);
+
+    cliente.enviados.clear();
+    cliente.extra = {};
+    await sync();
+    expect(cliente.enviados.where((r) => r.id == 'cashew:c1'), isNotEmpty);
   });
 }
