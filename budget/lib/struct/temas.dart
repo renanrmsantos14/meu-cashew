@@ -192,6 +192,14 @@ ThemeData temaFlutter(TemaPronto t) {
       onError: _melhorSobre(e.warn, [Colors.white, e.bg]),
       surface: e.bg,
       onSurface: e.tx,
+      onSurfaceVariant: e.mu,
+      // `background` é deprecado, mas as telas herdadas do Cashew ainda o usam
+      // (cabeçalhos); sem isso ficaria a cor gerada pelo fromSeed.
+      // ignore: deprecated_member_use
+      background: e.bg,
+      // ignore: deprecated_member_use
+      onBackground: e.tx,
+      surfaceTint: Colors.transparent,
       surfaceContainerLowest: e.surf,
       surfaceContainerLow: e.surf,
       surfaceContainer: e.surf,
@@ -203,6 +211,8 @@ ThemeData temaFlutter(TemaPronto t) {
       onSecondaryContainer: e.tx,
       tertiary: e.pos,
       onTertiary: _melhorSobre(e.pos, [Colors.white, e.bg]),
+      tertiaryContainer: Color.alphaBlend(e.pos.withOpacity(.12), e.bg),
+      onTertiaryContainer: e.tx,
       outline: e.line,
       outlineVariant: e.line,
     ),

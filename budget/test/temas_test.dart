@@ -146,6 +146,13 @@ void main() {
       expect(th.extension<AppColors>(), isNotNull);
       expect(th.extension<EditorialCores>(), same(t.cores));
       expect(th.scaffoldBackgroundColor, t.cores.bg);
+      // Cabeçalhos herdados do Cashew usam colorScheme.background.
+      // ignore: deprecated_member_use
+      expect(th.colorScheme.background, t.cores.bg);
+      expect(
+          contraste(th.colorScheme.onTertiaryContainer,
+              th.colorScheme.tertiaryContainer),
+          greaterThanOrEqualTo(4.5));
     });
   }
 
