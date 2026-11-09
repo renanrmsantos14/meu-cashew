@@ -1,4 +1,5 @@
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/globalSnackbar.dart';
@@ -10,6 +11,7 @@ import 'package:budget/widgets/openPopup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart' show BuildContext, Icons;
+import 'package:http/http.dart' as http;
 
 class MbPareamento {
   final String base;
@@ -18,6 +20,25 @@ class MbPareamento {
 }
 
 final RegExp _tokenValido = RegExp(r'^mb_[A-Za-z0-9_-]{43}$');
+bool mbTokenValido(String t) => _tokenValido.hasMatch(t);
+
+// Troca a senha do painel por um token. Em falha, lança a mensagem (String) para o usuário.
+Future<MbPareamento> mbPedirToken(String base, String senha,
+    {http.Client? cliente}) async {
+  final http.Client c = cliente ?? http.Client();
+  final Object? token;
+  try {
+    token = await MbCliente(base: base, cliente: c).parear(senha);
+  } on MbErroHttp catch (e) {
+    throw e.status == 401 ? 'Senha incorreta.' : e.mensagem;
+  } catch (_) {
+    throw 'Não foi possível falar com o Meu Banco. Confira o endereço e a internet.';
+  } finally {
+    if (cliente == null) c.close();
+  }
+  if (token is String && mbTokenValido(token)) return MbPareamento(base, token);
+  throw 'Resposta inesperada do Meu Banco.';
+}
 
 // https sem caminho; http só em depuração e só para o Worker local (localhost / emulador).
 bool mbOrigemPermitida(String u, {required bool debug}) {
@@ -50,7 +71,8 @@ Future<void> mbTrocarConta() async {
     await database.customStatement('DELETE FROM mb_aplicado');
     await database.customStatement('DELETE FROM mb_estado');
     await database.customStatement(
-        'DELETE FROM transactions WHERE transaction_pk LIKE ?', ['$mbPrefixo%']);
+        'DELETE FROM transactions WHERE transaction_pk LIKE ?',
+        ['$mbPrefixo%']);
     await database.customStatement('''
       DELETE FROM wallets WHERE wallet_pk LIKE 'mb:%'
         AND wallet_pk NOT IN (SELECT wallet_fk FROM transactions)''');
@@ -66,19 +88,20 @@ Future<void> mbTrocarConta() async {
   });
 }
 
-Future<bool> _contaDiferente(MbPareamento p) async =>
-    await meuBancoLerUrl() != p.base;
+Future<bool> _contaDiferente(String base) async =>
+    await meuBancoLerUrl() != base;
 
 // Grava o pareamento. Só chamar depois da confirmação do usuário.
 Future<void> mbParear(MbPareamento p) async {
   try {
-    if (await _contaDiferente(p)) await mbTrocarConta();
+    if (await _contaDiferente(p.base)) await mbTrocarConta();
     await meuBancoSalvarConfig(token: p.token, url: p.base);
     await mbCriarTabelas();
     await mbRemoverEstado('cursor');
   } catch (e) {
     if (kDebugMode) debugPrint("Meu Banco: falha ao parear: $e");
-    openSnackbar(SnackbarMessage(title: "Não foi possível salvar o pareamento."));
+    openSnackbar(
+        SnackbarMessage(title: "Não foi possível salvar o pareamento."));
     return;
   }
   openSnackbar(SnackbarMessage(title: "Pareado com ${Uri.parse(p.base).host}"));
@@ -87,16 +110,15 @@ Future<void> mbParear(MbPareamento p) async {
   }
 }
 
-// Nunca grava um pareamento sem o usuário ver o host. Retorna true se confirmou e pareou.
-Future<bool> mbConfirmarEParear(BuildContext? context, MbPareamento p) async {
+// Nunca grava um pareamento (nem envia a senha) sem o usuário ver o host.
+Future<bool> mbConfirmarHost(BuildContext? context, String base) async {
   final ctx = context ?? navigatorKey.currentContext;
-  final host = Uri.parse(p.base).host;
+  final host = Uri.parse(base).host;
   final jaPareado = (await meuBancoLerToken())?.isNotEmpty == true;
-  final trocaConta = await _contaDiferente(p);
+  final trocaConta = await _contaDiferente(base);
   final avisos = [
     "Só continue se o endereço for o do seu painel do Meu Banco.",
-    if (jaPareado)
-      "O pareamento atual será substituído.",
+    if (jaPareado) "O pareamento atual será substituído.",
     if (trocaConta)
       "Os dados importados da conta anterior serão removidos deste aparelho. O que você criou no Cashew continua.",
   ];
@@ -110,7 +132,12 @@ Future<bool> mbConfirmarEParear(BuildContext? context, MbPareamento p) async {
     onCancelLabel: "Cancelar",
     onCancel: () => popRoute(ctx, false),
   );
-  if (confirmou != true) return false;
+  return confirmou == true;
+}
+
+// Retorna true se confirmou e pareou.
+Future<bool> mbConfirmarEParear(BuildContext? context, MbPareamento p) async {
+  if (!await mbConfirmarHost(context, p.base)) return false;
   await mbParear(p);
   return true;
 }
