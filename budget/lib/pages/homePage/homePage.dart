@@ -63,6 +63,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // } else {
 
     // }
+    if (!_scrollController.hasClients) return;
     _scrollController.animateTo(0,
         duration: Duration(
             milliseconds:

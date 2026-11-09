@@ -22,7 +22,7 @@ class EditorialCores extends ThemeExtension<EditorialCores> {
       bg: Color(0xFFF7F6F3),
       surf: Color(0xFFFBFBFA),
       tx: Color(0xFF17181C),
-      mu: Color(0xFF77767A),
+      mu: Color(0xFF6B6A6E),
       line: Color.fromRGBO(20, 20, 30, .08),
       acc: Color(0xFF2340D8),
       warn: Color(0xFFB42318),

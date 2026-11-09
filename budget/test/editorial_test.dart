@@ -41,7 +41,7 @@ void main() {
       const Color(0xFFF7F6F3),
       const Color(0xFFFBFBFA),
       const Color(0xFF17181C),
-      const Color(0xFF77767A),
+      const Color(0xFF6B6A6E),
       const Color.fromRGBO(20, 20, 30, .08),
       const Color(0xFF2340D8),
       const Color(0xFFB42318),

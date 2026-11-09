@@ -40,6 +40,8 @@ class ModeloInicio {
   final List<ContaInicio> contas;
   final List<CartaoInicio> cartoes;
   final List<UltimaInicio> ultimas;
+  bool get semDados => contas.isEmpty && cartoes.isEmpty && porDia.isEmpty;
+
   const ModeloInicio({
     required this.ciclo,
     required this.saudacao,
@@ -249,22 +251,26 @@ ModeloInicio montarModeloInicio({
 Object? _decodificar(String? s) => s == null ? null : jsonDecode(s);
 
 // Linhas mais recentes do Cashew para a seção ÚLTIMAS (ficam em paralelo com o modelo, para abrir no editor).
-Future<List<({Transaction transaction, TransactionCategory category})>> mbUltimasTransacoes() async {
-  final q = database.select(database.transactions).join([
+JoinedSelectStatement<HasResultSet, dynamic> _consultaUltimas() =>
+    database.select(database.transactions).join([
     innerJoin(database.categories,
         database.categories.categoryPk.equalsExp(database.transactions.categoryFk))
   ])
     ..where(database.transactions.paid.equals(true))
     ..orderBy([OrderingTerm.desc(database.transactions.dateCreated)])
     ..limit(5);
-  return [
-    for (final r in await q.get())
-      (
-        category: r.readTable(database.categories),
-        transaction: r.readTable(database.transactions)
-      )
-  ];
-}
+
+typedef TransacaoInicio = ({Transaction transaction, TransactionCategory category});
+
+TransacaoInicio _linha(TypedResult r) => (
+      category: r.readTable(database.categories),
+      transaction: r.readTable(database.transactions)
+    );
+
+Future<List<TransacaoInicio>> mbUltimasTransacoes() async =>
+    [for (final r in await _consultaUltimas().get()) _linha(r)];
+
+Stream<void> mbMudouUltimas() => _consultaUltimas().watch();
 
 Future<({ModeloInicio modelo, List<({Transaction transaction, TransactionCategory category})> transacoes})>
     mbCarregarModeloInicio(String nome, DateTime agora) async {

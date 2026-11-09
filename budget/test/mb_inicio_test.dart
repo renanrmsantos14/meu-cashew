@@ -104,4 +104,24 @@ void main() {
     expect(find.text('Olá, Renan'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
+
+  testWidgets('sem dados mostra estado vazio em vez de R\$ 0,00', (t) async {
+    appStateSettings = {
+      'materialYou': false,
+      'accentSystemColor': false,
+      'batterySaver': false,
+      'increaseTextContrast': false,
+      'forceFullDarkBackground': false,
+    };
+    final vazio = montarModeloInicio(
+        ciclo: {}, contas: [], faturas: {}, sincronizadoEm: null, ultimas: [], nome: '', agora: _agora);
+    await t.pumpWidget(MaterialApp(
+      theme: temaEditorial(Brightness.light),
+      home: Scaffold(body: InicioEditorial.comModelo(vazio)),
+    ));
+    await t.pump(const Duration(seconds: 2));
+    expect(find.text('Ainda sem dados. Toque em Atualizar.'), findsOneWidget);
+    expect(find.text('Disponível agora'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
 }

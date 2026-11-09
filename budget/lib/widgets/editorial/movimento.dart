@@ -56,17 +56,22 @@ class _ContagemValorState extends State<ContagemValor> {
   @override
   Widget build(BuildContext context) {
     if (semMovimento(context)) {
-      return Text(widget.formatar(widget.valor), style: widget.estilo);
+      return _ajustado(widget.formatar(widget.valor));
     }
     return TweenAnimationBuilder<double>(
       key: ValueKey(widget.valor),
       tween: Tween(begin: _anterior, end: widget.valor),
       duration: const Duration(milliseconds: 900),
       curve: curvaEditorial,
-      builder: (context, v, _) =>
-          Text(widget.formatar(v), style: widget.estilo),
+      builder: (context, v, _) => _ajustado(widget.formatar(v)),
     );
   }
+
+  Widget _ajustado(String texto) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(texto, style: widget.estilo, maxLines: 1),
+      );
 }
 
 class MedidorEditorial extends StatelessWidget {

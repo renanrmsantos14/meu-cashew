@@ -1,4 +1,5 @@
-import 'package:budget/database/tables.dart';
+import 'dart:async';
+
 import 'package:budget/pages/addTransactionPage.dart';
 import 'package:budget/pages/settingsPage.dart';
 import 'package:budget/struct/editorial.dart';
@@ -24,8 +25,9 @@ class InicioEditorial extends StatefulWidget {
 
 class _InicioEditorialState extends State<InicioEditorial> {
   ModeloInicio? _modelo;
-  List<({Transaction transaction, TransactionCategory category})> _transacoes = const [];
+  List<TransacaoInicio> _transacoes = const [];
   bool _atualizando = false;
+  StreamSubscription<void>? _assinatura;
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _InicioEditorialState extends State<InicioEditorial> {
     _modelo = widget._modelo;
     if (_modelo == null) {
       meuBancoUltimaSync.addListener(_carregar);
+      _assinatura = mbMudouUltimas().listen((_) => _carregar());
       _carregar();
     }
   }
@@ -40,6 +43,7 @@ class _InicioEditorialState extends State<InicioEditorial> {
   @override
   void dispose() {
     meuBancoUltimaSync.removeListener(_carregar);
+    _assinatura?.cancel();
     super.dispose();
   }
 
@@ -75,8 +79,16 @@ class _InicioEditorialState extends State<InicioEditorial> {
             onMenu: widget._modelo == null
                 ? () => pushRoute(context, MoreActionsPage())
                 : null),
-        _Disponivel(modelo: m),
-        _GastoCiclo(modelo: m),
+        if (m.semDados)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text('Ainda sem dados. Toque em Atualizar.',
+                style: EdTexto.corpo(context).copyWith(color: e.mu)),
+          )
+        else ...[
+          _Disponivel(modelo: m),
+          _GastoCiclo(modelo: m),
+        ],
         if (m.contas.isNotEmpty) _Contas(contas: m.contas),
         for (final c in m.cartoes) _Cartao(cartao: c),
         if (m.ultimas.isNotEmpty)
@@ -102,7 +114,7 @@ class _InicioEditorialState extends State<InicioEditorial> {
       child: SafeArea(
         bottom: false,
         child: m == null
-            ? const SizedBox.expand()
+            ? _Esqueleto(cor: e.line)
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
@@ -144,17 +156,23 @@ class _BotaoIcone extends StatelessWidget {
       label: rotulo,
       child: ToqueEscala(
         onTap: onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: e.surf,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: e.line),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: e.surf,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: e.line),
+              ),
+              child: girar && !semMovimento(context)
+                  ? _Girando(child: Icon(icone, size: 20, color: e.tx))
+                  : Icon(icone, size: 20, color: e.tx),
+            ),
           ),
-          child: girar && !semMovimento(context)
-              ? _Girando(child: Icon(icone, size: 20, color: e.tx))
-              : Icon(icone, size: 20, color: e.tx),
         ),
       ),
     );
@@ -214,7 +232,6 @@ class _Topo extends StatelessWidget {
             rotulo: 'Atualizar',
             girar: atualizando,
             onTap: onAtualizar),
-        const SizedBox(width: 8),
         _BotaoIcone(icone: Icons.menu, rotulo: 'Configurações', onTap: onMenu),
       ],
     );
@@ -470,4 +487,35 @@ class _Ultimas extends StatelessWidget {
       ],
     );
   }
+}
+
+class _Esqueleto extends StatelessWidget {
+  const _Esqueleto({required this.cor});
+  final Color cor;
+
+  Widget _bloco(double l, double a) => Container(
+      width: l,
+      height: a,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration:
+          BoxDecoration(color: cor, borderRadius: BorderRadius.circular(4)));
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _bloco(120, 12),
+            _bloco(180, 28),
+            const SizedBox(height: 24),
+            _bloco(100, 12),
+            _bloco(260, 50),
+            const SizedBox(height: 24),
+            _bloco(double.infinity, 40),
+            const SizedBox(height: 12),
+            for (var i = 0; i < 3; i++) _bloco(double.infinity, 56),
+          ],
+        ),
+      );
 }

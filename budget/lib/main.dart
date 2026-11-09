@@ -26,6 +26,7 @@ import 'package:budget/widgets/restartApp.dart';
 import 'package:budget/struct/customDelayedCurve.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:budget/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -44,6 +45,13 @@ bool allowDangerousDebugFlags = kDebugMode;
 void main() async {
   captureLogs(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    LicenseRegistry.addLicense(() async* {
+      for (final f in const ['OFL-Geist.txt', 'OFL-SourceSerif.txt']) {
+        yield LicenseEntryWithLineBreaks(
+            [f == 'OFL-Geist.txt' ? 'Geist' : 'Source Serif 4'],
+            await rootBundle.loadString('assets/fonts/$f'));
+      }
+    });
     // Fork sem google-services: falha do Firebase não pode derrubar o app.
     try {
       await Firebase.initializeApp(
