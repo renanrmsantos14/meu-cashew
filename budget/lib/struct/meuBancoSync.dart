@@ -170,7 +170,8 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
             id != null && locais.contains(pkDoId(id))
                 ? pkDoId(id)
                 : mbPkCategoria(nome, receita));
-    await _aplicar(resultado);
+    // Uma transação só: 1 commit em vez de N e 1 notificação aos streams (as telas recarregavam a cada insert).
+    await database.transaction(() => _aplicar(resultado));
 
     final estado = <String, String>{
       'contas': jsonEncode(json['contas'] ?? const []),

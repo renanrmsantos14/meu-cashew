@@ -11,6 +11,7 @@ import 'package:budget/widgets/globalSnackbar.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/widgets/openPopup.dart';
 import 'package:budget/widgets/openSnackbar.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 class InicioEditorial extends StatefulWidget {
@@ -28,22 +29,24 @@ class _InicioEditorialState extends State<InicioEditorial> {
   List<TransacaoInicio> _transacoes = const [];
   bool _atualizando = false;
   StreamSubscription<void>? _assinatura;
+  late final RecargaColapsada _recarga = RecargaColapsada(_carregar);
 
   @override
   void initState() {
     super.initState();
     _modelo = widget._modelo;
     if (_modelo == null) {
-      meuBancoUltimaSync.addListener(_carregar);
-      _assinatura = mbMudouUltimas().listen((_) => _carregar());
-      _carregar();
+      meuBancoUltimaSync.addListener(_recarga.pedir);
+      // O 1º evento do stream já faz a carga inicial (sem corrida com uma gravação entre duas leituras).
+      _assinatura = mbMudouUltimas().listen((_) => _recarga.pedir());
     }
   }
 
   @override
   void dispose() {
-    meuBancoUltimaSync.removeListener(_carregar);
+    meuBancoUltimaSync.removeListener(_recarga.pedir);
     _assinatura?.cancel();
+    _recarga.fechar();
     super.dispose();
   }
 
@@ -51,6 +54,7 @@ class _InicioEditorialState extends State<InicioEditorial> {
     final r = await mbCarregarModeloInicio(
         '${appStateSettings["username"] ?? ""}', DateTime.now());
     if (!mounted) return;
+    if (r.modelo == _modelo && listEquals(r.transacoes, _transacoes)) return;
     setState(() {
       _modelo = r.modelo;
       _transacoes = r.transacoes;

@@ -124,4 +124,29 @@ void main() {
     expect(find.text('Disponível agora'), findsNothing);
     await t.pumpWidget(const SizedBox());
   });
+  test('ModeloInicio: mesmo conteúdo é igual, saldo ou nome diferente não', () {
+    List<Map<String, dynamic>> conta(double saldo) => [
+          {'id': 'a', 'type': 'BANK', 'subtype': 'CHECKING_ACCOUNT', 'name': 'Conta Inter', 'bank': 'Inter', 'balance': saldo}
+        ];
+    expect(_montar(), _montar());
+    expect(_montar().hashCode, _montar().hashCode);
+    expect(_montar(), isNot(_montar(nome: 'Outro')));
+    expect(_montar(contas: conta(10)), _montar(contas: conta(10)));
+    expect(_montar(contas: conta(10)), isNot(_montar(contas: conta(20))));
+  });
+
+  test('RecargaColapsada junta a rajada em uma recarga + uma repetição', () async {
+    var cargas = 0;
+    final r = RecargaColapsada(() async {
+      cargas++;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    await Future.wait([for (var i = 0; i < 20; i++) r.pedir()]);
+    expect(cargas, 2);
+    await r.pedir();
+    expect(cargas, 3);
+    r.fechar();
+    await r.pedir();
+    expect(cargas, 3);
+  });
 }
