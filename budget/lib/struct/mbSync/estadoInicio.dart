@@ -66,7 +66,7 @@ const _meses = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
   'jul', 'ago', 'set', 'out', 'nov', 'dez'
 ];
-String _diaMes(DateTime d) =>
+String diaMes(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')} ${_meses[d.month - 1]}';
 DateTime _soDia(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -74,7 +74,7 @@ String quandoRelativo(DateTime d, DateTime agora) {
   final dif = _soDia(agora).difference(_soDia(d)).inDays;
   if (dif == 0) return 'hoje';
   if (dif == 1) return 'ontem';
-  return _diaMes(d);
+  return diaMes(d);
 }
 
 String haQuanto(DateTime d, DateTime agora) {
@@ -112,7 +112,7 @@ DateTime? _proximoDia(Object? iso, DateTime agora) {
 // "12 nov" do próximo dia de fechamento/vencimento de [iso].
 String? mbProximoDiaMes(Object? iso, DateTime agora) {
   final d = _proximoDia(iso, agora);
-  return d == null ? null : _diaMes(d);
+  return d == null ? null : diaMes(d);
 }
 
 double _num(Object? v) => v is num ? v.toDouble() : 0;
@@ -140,7 +140,7 @@ ModeloInicio montarModeloInicio({
   final ini = DateTime.tryParse('${ciclo['inicio']}');
   final fim = DateTime.tryParse('${ciclo['fim']}');
   final rotuloCiclo = ini != null && fim != null
-      ? 'Ciclo ${_diaMes(ini)} – ${_diaMes(fim)}'
+      ? 'Ciclo ${diaMes(ini)} – ${diaMes(fim)}'
       : 'Ciclo atual';
 
   final bancarias = [for (final c in contas) if (c['type'] == 'BANK') c];
@@ -205,7 +205,7 @@ ModeloInicio montarModeloInicio({
       nome: m == null ? bruto : bruto.substring(0, m.start),
       final4: m?.group(1) ?? '',
       diasFecha: fecha?.difference(_soDia(agora)).inDays,
-      vence: venceData == null ? null : _diaMes(venceData),
+      vence: venceData == null ? null : diaMes(venceData),
       fatura: fatura,
       limite: limite > 0 ? limite : null,
       pct: limite > 0 ? fatura / limite * 100 : null,

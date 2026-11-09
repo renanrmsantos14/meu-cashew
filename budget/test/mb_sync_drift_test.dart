@@ -294,6 +294,8 @@ void main() {
     expect(cliente.enviados.where((r) => r.id == 'cashew:c1'), isNotEmpty);
     expect((await database.select(database.categories).get())
         .where((c) => c.categoryPk.startsWith('mb:cat:')), isNotEmpty);
+    expect((await database.select(database.wallets).get())
+        .where((w) => w.walletPk.startsWith('mb:')), isNotEmpty);
 
     await mbTrocarConta();
     expect((await _txs()).where((t) => t.transactionPk.startsWith('mb:')), isEmpty);
@@ -303,6 +305,8 @@ void main() {
     expect(await database.getCategoryInstanceOrNull('c1'), isNotNull);
     final cats = await database.select(database.categories).get();
     expect(cats.where((c) => c.categoryPk.startsWith('mb:cat:')), isEmpty);
+    expect((await database.select(database.wallets).get())
+        .where((w) => w.walletPk.startsWith('mb:')), isEmpty);
 
     cliente.enviados.clear();
     cliente.extra = {};

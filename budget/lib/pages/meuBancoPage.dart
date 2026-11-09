@@ -1,6 +1,7 @@
 import 'package:budget/pages/meuBancoParear.dart';
 import 'package:budget/struct/atualizador.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/pareamento.dart';
 import 'package:budget/struct/mbSync/pluggy.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/settings.dart';
@@ -11,7 +12,7 @@ import 'package:budget/functions.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/textInput.dart';
 import 'package:budget/widgets/textWidgets.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
@@ -87,9 +88,22 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
   }
 
   Future<void> _sincronizar() async {
-    await meuBancoSalvarConfig(token: _token.text, url: _url.text);
-    _token.clear();
-    await _carregar();
+    final url = _url.text.trim().replaceAll(RegExp(r'/+$'), '');
+    final token = _token.text.trim();
+    // Token novo ou endereço diferente é pareamento: mesma validação e confirmação do QR.
+    if (token.isNotEmpty || url != await meuBancoLerUrl()) {
+      if (token.isEmpty || !mbOrigemPermitida(url, debug: kDebugMode)) {
+        openSnackbar(SnackbarMessage(
+            title: "Informe um endereço https válido e o token para parear."));
+        return;
+      }
+      if (!mounted || !await mbConfirmarEParear(context, MbPareamento(url, token))) {
+        return;
+      }
+      _token.clear();
+      await _carregar();
+      return;
+    }
     await sincronizarMeuBanco();
   }
 

@@ -48,10 +48,6 @@ Future<void> mbAbrirConnect(BuildContext context, {String? itemId}) async {
       connectToken: token,
       itemId: itemId,
       onSuccess: (data) async {
-        if (kDebugMode) {
-          debugPrint('Pluggy onSuccess: ${data.runtimeType} '
-              '${data is Map ? data.keys.toList() : ''}');
-        }
         final id = mbItemIdDoSucesso(data) ?? itemId;
         if (id == null) {
           _aviso(

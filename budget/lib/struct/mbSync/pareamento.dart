@@ -40,7 +40,7 @@ MbPareamento? mbLerLinkPareamento(Uri uri) {
   return MbPareamento(u.replaceAll(RegExp(r'/+$'), ''), t);
 }
 
-// Conta nova: apaga o espelho, a fila, o estado e o que foi importado da conta anterior.
+// Conta nova: apaga o espelho, a fila, o estado e o que foi importado da conta anterior (carteiras sem uso, inclusive).
 // O que nasceu no Cashew fica e é reenviado como novo, porque o espelho está vazio.
 Future<void> mbTrocarConta() async {
   (await SharedPreferences.getInstance()).remove('mbNotifCursor');
@@ -51,6 +51,9 @@ Future<void> mbTrocarConta() async {
     await database.customStatement('DELETE FROM mb_estado');
     await database.customStatement(
         'DELETE FROM transactions WHERE transaction_pk LIKE ?', ['$mbPrefixo%']);
+    await database.customStatement('''
+      DELETE FROM wallets WHERE wallet_pk LIKE 'mb:%'
+        AND wallet_pk NOT IN (SELECT wallet_fk FROM transactions)''');
     // Categorias importadas sem uso local saem; as que ainda têm lançamento do Cashew ficam.
     await database.customStatement(
         "DELETE FROM associated_titles WHERE category_fk LIKE 'mb:cat:%'");

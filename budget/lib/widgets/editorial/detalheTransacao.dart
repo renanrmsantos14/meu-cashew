@@ -62,25 +62,9 @@ String mbNormalizarDescricao(String s) => s
     .replaceAll(RegExp(r'\s+'), ' ')
     .trim();
 
-const _meses = [
-  'jan',
-  'fev',
-  'mar',
-  'abr',
-  'mai',
-  'jun',
-  'jul',
-  'ago',
-  'set',
-  'out',
-  'nov',
-  'dez'
-];
 String _dataHora(DateTime d) =>
-    '${d.day.toString().padLeft(2, '0')} ${_meses[d.month - 1]} ${d.year} · '
+    '${diaMes(d)} ${d.year} · '
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-String _diaMes(DateTime d) =>
-    '${d.day.toString().padLeft(2, '0')} ${_meses[d.month - 1]}';
 
 Future<DetalheModelo?> mbCarregarDetalhe(String pk) async {
   final t = await (database.select(database.transactions)
@@ -170,7 +154,7 @@ Future<DetalheModelo?> mbCarregarDetalhe(String pk) async {
     descricaoRegra: chave.isEmpty ? null : chave.toUpperCase(),
     historico: [
       for (final x in iguais.where((x) => x.transactionPk != pk).take(3))
-        (quando: _diaMes(x.dateCreated), valor: x.amount)
+        (quando: diaMes(x.dateCreated), valor: x.amount)
     ],
     media: iguais.isEmpty
         ? 0
