@@ -1,4 +1,5 @@
 import 'package:budget/struct/atualizador.dart';
+import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/button.dart';
@@ -26,6 +27,7 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
   void initState() {
     super.initState();
     _carregar();
+    meuBancoAtualizarFila();
   }
 
   Future<void> _carregar() async {
@@ -65,9 +67,12 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     });
   }
 
-  String _formatar(DateTime d) {
-    String dois(int n) => n.toString().padLeft(2, "0");
-    return "${dois(d.day)}/${dois(d.month)}/${d.year} ${dois(d.hour)}:${dois(d.minute)}";
+  String _haQuanto(DateTime d) {
+    final min = DateTime.now().difference(d).inMinutes;
+    if (min < 1) return "Sincronizado agora há pouco";
+    if (min < 60) return "Sincronizado há $min min";
+    if (min < 1440) return "Sincronizado há ${min ~/ 60} h";
+    return "Sincronizado há ${min ~/ 1440} d";
   }
 
   @override
@@ -126,10 +131,37 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
                 horizontal: 20, vertical: 5),
             child: TextFont(
               text: ultima == null
-                  ? "Última sincronização: ainda não nesta sessão"
-                  : "Última sincronização: " + _formatar(ultima),
+                  ? "Ainda não sincronizado nesta sessão"
+                  : _haQuanto(ultima),
               fontSize: 14,
               maxLines: 3,
+            ),
+          ),
+        ),
+        ValueListenableBuilder<MbFila>(
+          valueListenable: meuBancoFila,
+          builder: (context, fila, _) => Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (fila.pendentes > 0)
+                  TextFont(
+                    text: fila.pendentes == 1
+                        ? "1 alteração aguardando envio"
+                        : "${fila.pendentes} alterações aguardando envio",
+                    fontSize: 14,
+                    maxLines: 2,
+                  ),
+                for (final r in fila.rejeitados)
+                  TextFont(
+                    text: "Rejeitado: $r",
+                    fontSize: 13,
+                    maxLines: 4,
+                    textColor: Theme.of(context).colorScheme.error,
+                  ),
+              ],
             ),
           ),
         ),
