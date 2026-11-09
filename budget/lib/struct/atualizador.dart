@@ -5,6 +5,7 @@ import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/globalSnackbar.dart';
 import 'package:budget/widgets/openPopup.dart';
 import 'package:budget/widgets/openSnackbar.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
@@ -93,7 +94,7 @@ String _hoje() => DateTime.now().toIso8601String().substring(0, 10);
 /// Verificação automática (ao abrir o app). Silenciosa em falhas; não bloqueia.
 /// Após "Depois", não oferece a mesma versão de novo no mesmo dia.
 Future<void> atualizadorVerificarAutomatico(BuildContext context) async {
-  if (!Platform.isAndroid) return;
+  if (kIsWeb || !Platform.isAndroid) return;
   try {
     final nova = await atualizadorProcurar();
     if (nova == null) return;
@@ -107,7 +108,7 @@ Future<void> atualizadorVerificarAutomatico(BuildContext context) async {
 
 /// Botão manual. Retorna mensagem para exibir ao usuário.
 Future<String> atualizadorVerificarManual(BuildContext context) async {
-  if (!Platform.isAndroid) return "Atualização dentro do app só no Android.";
+  if (kIsWeb || !Platform.isAndroid) return "Atualização dentro do app só no Android.";
   try {
     final nova = await atualizadorProcurar();
     if (nova == null) return "Você já está na versão mais recente.";

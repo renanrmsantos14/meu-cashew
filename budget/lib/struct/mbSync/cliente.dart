@@ -5,6 +5,7 @@ import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:universal_html/html.dart' as html;
 
 class MbErroHttp implements Exception {
   final int status;
@@ -61,6 +62,7 @@ class MbCliente {
     final msg = (json['mensagem'] ?? json['erro'])?.toString();
     switch (resp.statusCode) {
       case 401:
+        if (kIsWeb) html.window.location.href = '/login?volta=/app/';
         throw MbErroHttp(401,
             'Token inválido ou revogado. Gere um novo token no Meu Banco.');
       case 429:

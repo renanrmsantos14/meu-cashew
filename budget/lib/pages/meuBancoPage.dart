@@ -303,18 +303,19 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
             maxLines: 5,
           ),
         ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 10),
-          child: Button(
-            label: _procurandoAtualizacao
-                ? "Procurando..."
-                : "Procurar atualização",
-            disabled: _procurandoAtualizacao,
-            expandedLayout: true,
-            onTap: _procurarAtualizacao,
+        if (!kIsWeb)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 20, vertical: 10),
+            child: Button(
+              label: _procurandoAtualizacao
+                  ? "Procurando..."
+                  : "Procurar atualização",
+              disabled: _procurandoAtualizacao,
+              expandedLayout: true,
+              onTap: _procurarAtualizacao,
+            ),
           ),
-        ),
         if (_msgAtualizacao != null)
           Padding(
             padding: const EdgeInsetsDirectional.symmetric(
