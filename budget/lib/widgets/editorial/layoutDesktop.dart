@@ -86,36 +86,38 @@ class LayoutDesktop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = cores(context);
-    return Row(
-      children: [
-        Container(
-          width: mbLarguraLateral,
-          decoration: BoxDecoration(
-            color: e.bg,
-            border: Border(right: BorderSide(color: e.line)),
-          ),
-          child: lateral ?? const LateralEditorial(),
-        ),
-        Expanded(child: conteudo),
-        ValueListenableBuilder<String?>(
-          valueListenable: mbTransacaoSelecionada,
-          builder: (context, pk, _) => pk == null
-              ? const SizedBox.shrink()
-              : Container(
-                  width: mbLarguraDetalhe,
-                  decoration: BoxDecoration(
-                    color: e.surf,
-                    border: Border(left: BorderSide(color: e.line)),
-                  ),
-                  child: DetalheTransacao(
-                    key: ValueKey(pk),
-                    pk: pk,
-                    carregar: carregarDetalhe,
-                    aoMudarCategoria: aoMudarCategoria,
-                  ),
-                ),
-        ),
-      ],
-    );
+    return Material(
+        type: MaterialType.transparency,
+        child: Row(
+          children: [
+            Container(
+              width: mbLarguraLateral,
+              decoration: BoxDecoration(
+                color: e.bg,
+                border: Border(right: BorderSide(color: e.line)),
+              ),
+              child: lateral ?? const LateralEditorial(),
+            ),
+            Expanded(child: conteudo),
+            ValueListenableBuilder<String?>(
+              valueListenable: mbTransacaoSelecionada,
+              builder: (context, pk, _) => pk == null
+                  ? const SizedBox.shrink()
+                  : Container(
+                      width: mbLarguraDetalhe,
+                      decoration: BoxDecoration(
+                        color: e.surf,
+                        border: Border(left: BorderSide(color: e.line)),
+                      ),
+                      child: DetalheTransacao(
+                        key: ValueKey(pk),
+                        pk: pk,
+                        carregar: carregarDetalhe,
+                        aoMudarCategoria: aoMudarCategoria,
+                      ),
+                    ),
+            ),
+          ],
+        ));
   }
 }

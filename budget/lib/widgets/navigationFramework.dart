@@ -1,4 +1,7 @@
-import 'package:budget/widgets/editorial/layoutDesktop.dart' show mbPaginaAtual, ObservadorPaginas;
+import 'package:budget/widgets/editorial/layoutDesktop.dart'
+    show mbPaginaAtual, ObservadorPaginas;
+import 'package:budget/widgets/editorial/versaoCanto.dart'
+    show FaixaVersao, mbAlturaFaixaVersao;
 import 'dart:async';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:animations/animations.dart';
@@ -512,18 +515,26 @@ class PageNavigationFrameworkState extends State<PageNavigationFramework> {
                   : Duration(milliseconds: 300),
         ),
         extendBody: false,
-        bottomNavigationBar: BottomNavBar(
-          currentNavigationStackedIndex: currentPage,
-          onChanged: (index) {
-            changePage(index);
-          },
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!getIsFullScreen(context)) const FaixaVersao(),
+            BottomNavBar(
+              currentNavigationStackedIndex: currentPage,
+              onChanged: (index) {
+                changePage(index);
+              },
+            ),
+          ],
         ),
       ),
       Align(
         alignment: AlignmentDirectional.bottomEnd,
         child: Padding(
           padding: EdgeInsetsDirectional.only(
-            bottom: getHeightNavigationSidebar(context) + 15,
+            bottom: getHeightNavigationSidebar(context) +
+                15 +
+                (getIsFullScreen(context) ? 0 : mbAlturaFaixaVersao),
             end: 15,
           ),
           child: AnimateFAB(
