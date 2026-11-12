@@ -7,6 +7,7 @@ import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/mbSync/emprestimos.dart';
+import 'package:budget/struct/mbSync/notificacoes.dart';
 import 'package:budget/struct/mbSync/reembolso.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/mbSync/revisao.dart';
@@ -302,6 +303,38 @@ void main() {
       expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
       expect((await mbLerAplicado())['mb:p1'], 'lazer');
       expect(cliente.pullsCompletos, greaterThan(1)); // decisão local força o re-pull completo
+    });
+
+    test('botão da notificação responde a fila; repetir ou item que saiu da fila não faz nada', () async {
+      final item = {'id': 'tx:e1', 'tipo': 'envio_santander', 'tx_id': 'e1', 'data': _hoje(), 'descricao': 'PIX ENVIADO SANTANDER', 'valor': 800};
+      cliente.transacoes = [_tx('e1', 'PIX ENVIADO SANTANDER', -800, data: _hoje())];
+      cliente.ciclo = {'inicio': _hoje(), 'revisar': [item]};
+      await sync();
+      cliente.enviados.clear();
+      final alerta = {'chave': 'revisar:tx:e1', 'titulo': 'x', 'corpo': 'y', 'item': item};
+
+      expect([for (final a in mbAcoesDoAlerta(alerta)) a.id], ['emprestimo', 'investimento', 'ajuda']);
+      final payload = mbPayloadAlerta(alerta);
+      expect(payload.startsWith(mbPrefixoPayload), true);
+
+      expect(await mbResponderPelaNotificacao(payload, null, clienteParaTeste: cliente), false); // toque simples
+      expect(cliente.enviados, isEmpty);
+      expect(await mbResponderPelaNotificacao(payload, 'investimento', clienteParaTeste: cliente), true);
+      expect(cliente.enviados.firstWhere((r) => r.id == 'tx:e1').dados!['resposta'], 'investimento');
+      expect(meuBancoRevisar.value, isEmpty);
+
+      cliente.enviados.clear();
+      expect(await mbResponderPelaNotificacao(payload, 'ajuda', clienteParaTeste: cliente), false); // já respondido
+      expect(cliente.enviados, isEmpty);
+    });
+
+    test('reembolso na notificação abre o app em vez de responder; Pix enviado e salário não têm botões', () {
+      final pix = {'id': 'tx:r1', 'tipo': 'pix_recebido', 'tx_id': 'r1', 'valor': 60};
+      final acoes = mbAcoesDoAlerta({'chave': 'revisar:tx:r1', 'item': pix});
+      expect([for (final a in acoes) [a.id, a.showsUserInterface]],
+          [['devolucao', false], ['reembolso', true], ['renda', false]]);
+      expect(mbAcoesDoAlerta({'chave': 'revisar:tx:p1', 'item': {'id': 'tx:p1', 'tipo': 'pix_enviado', 'tx_id': 'p1', 'valor': 5}}), isEmpty);
+      expect(mbAcoesDoAlerta({'chave': 'revisar:salario:2026-11'}), isEmpty);
     });
 
     test('decisão vinda de outro aparelho remapeia no pull incremental seguinte', () async {

@@ -39,7 +39,7 @@ void main() {
     Map<String, dynamic>? widget;
     final n = await mbConferirAlertas(
       cliente: cliente,
-      mostrar: (id, t, c) async => mostradas.add('$t|$c'),
+      mostrar: (id, t, c, a) async => mostradas.add('$t|$c'),
       lerCursor: () async => cursor,
       gravarCursor: (c) async => cursor = c,
       salvarWidget: (r) async => widget = r,
@@ -56,7 +56,7 @@ void main() {
     var gravou = false;
     final n = await mbConferirAlertas(
       cliente: cliente,
-      mostrar: (id, t, c) async {},
+      mostrar: (id, t, c, a) async {},
       lerCursor: () async => 'c0',
       gravarCursor: (c) async => gravou = true,
       salvarWidget: (r) async {},
