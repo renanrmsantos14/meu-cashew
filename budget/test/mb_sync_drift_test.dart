@@ -52,6 +52,10 @@ Future<void> _categoria(String pk, String nome, {bool receita = false}) =>
         income: Value(receita),
         dateTimeModified: Value(DateTime.now())));
 
+// Categorias próprias criadas pelo sync (mb:cat:) também sobem ao servidor; os testes olham só o resto.
+Iterable<Registro> _semCatsMb(Iterable<Registro> l) =>
+    l.where((r) => !r.id.startsWith('cashew:mb:cat:'));
+
 Future<List<Transaction>> _txs() => database.select(database.transactions).get();
 
 void main() {
@@ -80,7 +84,7 @@ void main() {
   test('categoria criada no Cashew vai no push com id cashew:<pk>', () async {
     await _categoria('c1', 'Mercado');
     await sync();
-    final r = cliente.enviados.singleWhere((r) => r.tabela == 'categorias');
+    final r = _semCatsMb(cliente.enviados).singleWhere((r) => r.tabela == 'categorias');
     expect(r.id, 'cashew:c1');
     expect(r.dados!['nome'], 'Mercado');
     expect(r.dados!['tipo'], 'despesa');
@@ -94,7 +98,7 @@ void main() {
     expect((await database.getCategoryInstanceOrNull('c1'))!.name, 'Supermercado');
     cliente.enviados.clear();
     await sync();
-    expect(cliente.enviados.where((r) => r.tabela == 'categorias'), isEmpty);
+    expect(_semCatsMb(cliente.enviados).where((r) => r.tabela == 'categorias'), isEmpty);
     expect((await database.getCategoryInstanceOrNull('c1'))!.name, 'Supermercado');
   });
 
@@ -109,11 +113,11 @@ void main() {
             dateTimeModified: Value(DateTime.now().add(const Duration(seconds: 5)))));
     cliente.semRede = true;
     await sync();
-    expect(cliente.enviados, isEmpty);
-    expect((await mbLerFila()).pendentes, 1);
+    expect(_semCatsMb(cliente.enviados), isEmpty);
+    expect((await mbLerFila()).pendentes, greaterThan(0));
     cliente.semRede = false;
     await sync();
-    expect(cliente.enviados.single.dados!['nome'], 'Feira');
+    expect(_semCatsMb(cliente.enviados).single.dados!['nome'], 'Feira');
     expect((await mbLerFila()).pendentes, 0);
   });
 
@@ -283,7 +287,7 @@ void main() {
     expect(await database.select(database.objectives).get(), hasLength(2));
     cliente.enviados.clear();
     await sync();
-    expect(cliente.enviados, isEmpty);
+    expect(_semCatsMb(cliente.enviados), isEmpty);
   });
 
   test('trocar de conta apaga o espelho e o importado, e reenvia o que é do Cashew', () async {
@@ -356,6 +360,72 @@ void main() {
     expect(txs.map((t) => t.transactionPk), ['mb:inv:i1']);
     expect(txs.single.amount, 1600.0);
     expect(txs.single.dateCreated, cdb.dateCreated);
+    expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+  });
+
+  test('histórico: primeira carga completa converte as categorias sem mandar ajuste', () async {
+    await _categoria('c1', 'Mercado');
+    cliente.extra = banco();
+    await sync();
+    await mbRemoverEstado('conv_categorias_v1');
+    // Estado antigo: categoria pela tradução do banco, já aplicada.
+    await (database.update(database.transactions)
+          ..where((t) => t.transactionPk.equals('mb:t1')))
+        .write(const TransactionsCompanion(categoryFk: Value('mb:cat:d:Padaria')));
+    await mbGravarAplicado({'mb:t1': 'mb:cat:d:Padaria'}, const []);
+    cliente.enviados.clear();
+    await sync();
+    expect((await _txs()).single.categoryFk, 'mb:cat:d:Outros');
+    expect((await mbLerAplicado())['mb:t1'], 'mb:cat:d:Outros');
+    expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+    expect(await mbLerEstado('conv_categorias_v1'), isNotNull);
+    cliente.enviados.clear();
+    await sync();
+    expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+  });
+
+  test('histórico: categoria escolhida pelo usuário sobrevive à conversão', () async {
+    await _categoria('c1', 'Mercado');
+    cliente.extra = banco();
+    await sync();
+    await mbRemoverEstado('conv_categorias_v1');
+    await (database.update(database.transactions)
+          ..where((t) => t.transactionPk.equals('mb:t1')))
+        .write(TransactionsCompanion(
+            categoryFk: const Value('c1'),
+            dateTimeModified: Value(DateTime.now().add(const Duration(seconds: 5)))));
+    await sync();
+    expect((await _txs()).single.categoryFk, 'c1');
+    expect(cliente.enviados.singleWhere((r) => r.tabela == 'ajustes').dados!['categoria_id'], 'cashew:c1');
+  });
+
+  test('histórico: transação que passou a ser transferência sai sem ajuste', () async {
+    cliente.extra = {
+      'contas': [{'id': 'a1', 'type': 'BANK', 'name': 'Conta', 'bank': 'Inter'}],
+      'transacoes': [
+        {'id': 'r1', 'account_id': 'a1', 'date': '2025-01-10', 'description': 'Pix SANTANDER', 'amount': 900.0, 'status': 'POSTED'}
+      ],
+    };
+    await mbCriarTabelas();
+    await sync();
+    expect(await _txs(), isEmpty);
+    await database.into(database.transactions).insert(TransactionsCompanion.insert(
+        transactionPk: const Value('mb:r1'),
+        name: 'Pix SANTANDER',
+        amount: 900.0,
+        note: '',
+        categoryFk: 'mb:cat:r:Transferências',
+        walletFk: const Value('mb:a1'),
+        dateCreated: Value(DateTime(2025, 1, 10, 12)),
+        income: const Value(true),
+        paid: const Value(true),
+        dateTimeModified: Value(DateTime.utc(2000))));
+    await mbGravarAplicado({'mb:r1': 'mb:cat:r:Transferências'}, const []);
+    await mbRemoverEstado('conv_categorias_v1');
+    cliente.enviados.clear();
+    await sync();
+    expect(await _txs(), isEmpty);
+    expect(await mbLerAplicado(), isEmpty);
     expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
   });
 }

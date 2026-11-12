@@ -194,8 +194,8 @@ void main() {
       expect(r.transacoes.single.categoriaPk, 'cx');
     });
 
-    test('sem regra, usa a categoria do banco traduzida', () {
-      expect(_pull(_json({}), []).transacoes.single.categoriaPk, 'mb:cat:d:Farmácia');
+    test('sem regra, converte a categoria do banco para a própria', () {
+      expect(_pull(_json({}), []).transacoes.single.categoriaPk, 'mb:cat:d:Saúde');
     });
 
     test('repassa ciclo, faturas, avisos, config e sincronizado_em', () {
