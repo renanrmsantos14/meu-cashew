@@ -303,6 +303,21 @@ Future<List<TransacaoInicio>> mbUltimasTransacoes() async =>
 
 Stream<void> mbMudouUltimas() => _consultaUltimas().watch();
 
+/// Pendência "salário não detectado" (35 dias sem salário no Inter), calculada pelo Worker em `ciclo`.
+/// A fila "Para revisar" lê isto. Worker antigo não manda os campos: sem pendência.
+typedef SalarioPendente = ({bool pendente, int dias, DateTime? ultimoSalario});
+
+SalarioPendente mbSalarioPendente(Map? ciclo) => (
+      pendente: ciclo?['salarioNaoDetectado'] == true,
+      dias: (ciclo?['diasSemSalario'] as num?)?.toInt() ?? 0,
+      ultimoSalario: DateTime.tryParse('${ciclo?['ultimoSalario']}'),
+    );
+
+Future<SalarioPendente> mbLerSalarioPendente() async {
+  final ciclo = _decodificar(await mbLerEstado('ciclo'));
+  return mbSalarioPendente(ciclo is Map ? ciclo : null);
+}
+
 Future<({ModeloInicio modelo, List<({Transaction transaction, TransactionCategory category})> transacoes})>
     mbCarregarModeloInicio(String nome, DateTime agora) async {
   final mapa = <String, Object?>{

@@ -243,12 +243,14 @@ String mbNormalizarEstabelecimento(String s) {
 
 const int mbJanelaEstornoDias = 60;
 
-// Conta corrente do Santander é usada por outra pessoa: não entra no app (só os investimentos de lá contam).
+// Conta corrente e cartão do Santander são usados por outra pessoa: não entram no app (só poupança e investimentos de lá contam).
+// Mesma regra de contaIgnorada no Worker (apps/worker/src/ciclo.js).
 final RegExp _bancoIgnorado = RegExp(r"santander", caseSensitive: false);
 
 bool mbContaIgnorada(Map c) =>
-    c["type"] == "BANK" &&
-    (c["subtype"] == null || c["subtype"] == "CHECKING_ACCOUNT") &&
+    (c["type"] == "CREDIT" ||
+        (c["type"] == "BANK" &&
+            (c["subtype"] == null || c["subtype"] == "CHECKING_ACCOUNT"))) &&
     _bancoIgnorado.hasMatch("${c["name"] ?? ""} ${c["bank"] ?? ""}");
 
 const String mbCarteiraInvestimentos = mbPrefixo + "investimentos";

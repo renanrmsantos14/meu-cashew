@@ -42,6 +42,7 @@ ModeloInicio _montar({List<Map<String, dynamic>>? contas, Map<String, dynamic>? 
     );
 
 void main() {
+  salarioPendenteTests();
   test('disponível soma só as contas BANK e agrupa poupanças', () {
     final m = _montar();
     expect(m.disponivel, 1600.5);
@@ -148,5 +149,33 @@ void main() {
     r.fechar();
     await r.pedir();
     expect(cargas, 3);
+  });
+}
+
+void salarioPendenteTests() {
+  group('pendência de salário (dado para a fila Para revisar)', () {
+    test('Worker novo: lê o estado de 35 dias sem salário', () {
+      final p = mbSalarioPendente({
+        'salarioNaoDetectado': true,
+        'diasSemSalario': 41,
+        'ultimoSalario': '2026-09-26',
+      });
+      expect(p.pendente, true);
+      expect(p.dias, 41);
+      expect(p.ultimoSalario, DateTime(2026, 9, 26));
+    });
+    test('salário em dia: sem pendência', () {
+      final p = mbSalarioPendente({'salarioNaoDetectado': false, 'diasSemSalario': 12, 'ultimoSalario': '2026-10-26'});
+      expect(p.pendente, false);
+      expect(p.dias, 12);
+    });
+    test('Worker antigo (sem os campos) ou sem ciclo: sem pendência e sem quebrar', () {
+      for (final c in <Map?>[null, {}, {'inicio': '2026-10-26', 'ultimoSalario': null}]) {
+        final p = mbSalarioPendente(c);
+        expect(p.pendente, false);
+        expect(p.dias, 0);
+        expect(p.ultimoSalario, isNull);
+      }
+    });
   });
 }
