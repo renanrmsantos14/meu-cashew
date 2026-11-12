@@ -28,8 +28,11 @@ Espelho _espelho(Map<String, dynamic> l) => Espelho(
       l['motivo'] as String?,
     );
 
-Future<Map<String, Espelho>> mbLerEspelho() async {
-  final linhas = await database.customSelect('SELECT * FROM mb_registros').get();
+Future<Map<String, Espelho>> mbLerEspelho({String? tabela}) async {
+  final linhas = await database
+      .customSelect('SELECT * FROM mb_registros WHERE ?1 IS NULL OR tabela = ?1',
+          variables: [Variable<String>(tabela)])
+      .get();
   final out = <String, Espelho>{};
   for (final l in linhas) {
     final e = _espelho(l.data);

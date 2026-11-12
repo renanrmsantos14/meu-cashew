@@ -403,6 +403,8 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
   final naoGasto = <String>{};
   // Receitas sem ajuste ou regra do usuário: candidatas a estorno de uma compra.
   final estornos = <String>{};
+  // Reembolsos da fila com gasto confirmado: pk do reembolso -> pk do gasto.
+  final vinculos = <String, String>{};
   final inicioCiclo = _mapa(json["ciclo"])["inicio"] as String?;
   for (final t in (json["transacoes"] as List? ?? const [])) {
     final id = t["id"].toString();
@@ -492,7 +494,12 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
       categoriaPk: pkCategoria(categoriaId, nomeCategoria, receita),
       pendente: pendente,
     );
-    // Reembolso abate o gasto como estorno genérico (categoria "Outros"), não entra como renda.
+    // Reembolso abate o gasto como estorno, não entra como renda: o gasto confirmado pelo usuário (se houver)
+    // dá a categoria; sem ele, a categoria é a genérica "Outros".
+    if (resposta == 'reembolso') {
+      final gasto = revisoes.decisoes[id]?['reembolso_de'];
+      if (gasto is String) vinculos[mbPkTransacao(id)] = mbPkTransacao(gasto);
+    }
     transacoes.add(cashback
         ? tx.abatendo(mbCategoriaCashback,
             pkCategoria(null, mbCategoriaCashback, false))
@@ -501,7 +508,8 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
                 pkCategoria(null, mbCategoriaOutros, false))
             : tx);
   }
-  _abaterEstornos(transacoes, estornos, compras, abatimentos);
+  final reservadas = _abaterReembolsosVinculados(transacoes, vinculos, compras);
+  _abaterEstornos(transacoes, estornos, compras, abatimentos, reservadas);
   final pendentes = <String>{
     for (final id in (json["pendentes"] as List? ?? const []))
       mbPkTransacao(id.toString())
@@ -542,11 +550,31 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
   );
 }
 
+// Reembolso com gasto confirmado: fica na categoria desse gasto (do mesmo pull ou de pulls anteriores). Se o gasto
+// não existe mais, o reembolso segue em "Outros". Devolve os gastos já usados, que estorno automático não pode abater.
+Set<String> _abaterReembolsosVinculados(
+    List<MbTransacao> transacoes, Map<String, String> vinculos, List<MbCompra> locais) {
+  final reservadas = <String>{};
+  if (vinculos.isEmpty) return reservadas;
+  final gastos = <String, ({String nome, String pk})>{
+    for (final c in locais) c.pk: (nome: c.categoriaNome, pk: c.categoriaPk),
+    for (final t in transacoes)
+      if (t.valor < 0) t.pk: (nome: t.categoriaNome, pk: t.categoriaPk),
+  };
+  for (var i = 0; i < transacoes.length; i++) {
+    final gasto = gastos[vinculos[transacoes[i].pk]];
+    if (gasto == null) continue;
+    reservadas.add(vinculos[transacoes[i].pk]!);
+    transacoes[i] = transacoes[i].abatendo(gasto.nome, gasto.pk);
+  }
+  return reservadas;
+}
+
 // Estorno (mesmo valor e estabelecimento de uma compra nos 60 dias anteriores) abate o gasto: vira valor
 // positivo na categoria da compra, em vez de renda. `locais` são compras de pulls anteriores e
 // `abatimentosLocais` os estornos já aplicados em pulls anteriores, que já consumiram a compra deles.
 void _abaterEstornos(List<MbTransacao> transacoes, Set<String> estornos,
-    List<MbCompra> locais, List<MbCompra> abatimentosLocais) {
+    List<MbCompra> locais, List<MbCompra> abatimentosLocais, Set<String> reservadas) {
   if (estornos.isEmpty) return;
   final pks = {for (final t in transacoes) t.pk};
   final compras = <int, List<MbCompra>>{};
@@ -579,6 +607,7 @@ void _abaterEstornos(List<MbTransacao> transacoes, Set<String> estornos,
     final alvo = alvoDe(a.data, a.estabelecimento, a.centavos);
     if (alvo != null) usadas.add(alvo.pk);
   }
+  usadas.addAll(reservadas);
   // Em ordem cronológica, para o estorno mais antigo ficar com a compra mais antiga.
   final ordem = [
     for (var i = 0; i < transacoes.length; i++)

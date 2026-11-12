@@ -437,13 +437,13 @@ Future<void> _aplicarInvestimentos(List<MbInvestimento> lista) async {
 // (a fila some na hora), manda ao servidor e remapeia as transações. `categoriaPk` só para resposta "categoria".
 // Offline ou com falha, a decisão fica pendente e vai na próxima sincronização.
 Future<void> mbResponderRevisao(MbItemRevisao item, String resposta,
-    {String? categoriaPk, MbCliente? clienteParaTeste}) async {
+    {String? categoriaPk, String? reembolsoDe, MbCliente? clienteParaTeste}) async {
   if (item.txId == null || !mbRespostasRevisao.contains(resposta)) return;
   if (resposta == 'categoria' && categoriaPk == null) return;
   await mbCriarTabelas();
   await mbGravarEspelho([
     for (final r in mbRegistrosDeResposta(item, resposta,
-        categoriaPk: categoriaPk, agora: isoMs(DateTime.now())))
+        categoriaPk: categoriaPk, reembolsoDe: reembolsoDe, agora: isoMs(DateTime.now())))
       Espelho(r, null, true, null)
   ]);
   await mbGravarEstado({_chaveRepuxar: isoMs(DateTime.now())});

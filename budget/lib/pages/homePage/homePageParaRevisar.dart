@@ -1,6 +1,7 @@
 import 'package:budget/colors.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/estadoInicio.dart' show brl, diaMes;
+import 'package:budget/struct/mbSync/reembolso.dart';
 import 'package:budget/struct/mbSync/revisao.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
 import 'package:budget/struct/meuBancoSync.dart';
@@ -130,13 +131,14 @@ class ItemParaRevisar extends StatefulWidget {
 }
 
 class _ItemParaRevisarState extends State<ItemParaRevisar> {
-  bool _enviando = false;
+  bool _enviando = false, _escolhendo = false;
 
-  Future<void> _responder(String resposta, {String? categoriaPk}) async {
+  Future<void> _responder(String resposta, {String? categoriaPk, String? reembolsoDe}) async {
     if (_enviando) return;
-    setState(() => _enviando = true);
+    if (mounted) setState(() => _enviando = true);
     try {
-      await mbResponderRevisao(widget.item, resposta, categoriaPk: categoriaPk);
+      await mbResponderRevisao(widget.item, resposta,
+          categoriaPk: categoriaPk, reembolsoDe: reembolsoDe);
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -163,6 +165,36 @@ class _ItemParaRevisarState extends State<ItemParaRevisar> {
     );
     if (nome is String) {
       await _responder('categoria', categoriaPk: await _pkDaCategoria(nome));
+    }
+  }
+
+  // Reembolso: o usuário confirma qual gasto dos últimos 15 dias foi reembolsado (ou nenhum). Fechar a folha não responde.
+  Future<void> _escolherReembolso() async {
+    if (_enviando || _escolhendo) return;
+    _escolhendo = true;
+    try {
+      await _escolherReembolsoSemTrava();
+    } finally {
+      _escolhendo = false;
+    }
+  }
+
+  Future<void> _escolherReembolsoSemTrava() async {
+    final sugestoes = await mbSugestoesDoItem(widget.item);
+    if (!mounted) return;
+    final data = DateTime.tryParse(widget.item.data ?? '');
+    final escolha = await openBottomSheet(
+      context,
+      PopupFramework(
+        title: 'Qual gasto foi reembolsado?',
+        subtitle: '${brl(widget.item.valor)}${data == null ? '' : ' · ${diaMes(data)}'}',
+        child: SugestoesReembolso(sugestoes: sugestoes),
+      ),
+    );
+    if (escolha is MbGastoCandidato) {
+      await _responder('reembolso', reembolsoDe: escolha.pk.substring(mbPrefixo.length));
+    } else if (escolha == semGastoReembolso) {
+      await _responder('reembolso');
     }
   }
 
@@ -202,7 +234,8 @@ class _ItemParaRevisarState extends State<ItemParaRevisar> {
           if (i.tipo == 'pix_enviado')
             _botao('Escolher categoria', cor, _escolherCategoria),
           for (final r in i.respostas)
-            _botao(_rotulos[r]!, cor, () => _responder(r)),
+            _botao(_rotulos[r]!, cor,
+                r == 'reembolso' ? _escolherReembolso : () => _responder(r)),
           for (final c in i.candidatos)
             _botao('${brl(c.valor)} · ${diaMes(DateTime.tryParse(c.data) ?? DateTime.now())}',
                 cor, () => _marcarSalario(c.txId)),
@@ -219,4 +252,85 @@ class _ItemParaRevisarState extends State<ItemParaRevisar> {
         textColor: cor.onSecondaryContainer,
         onTap: _enviando ? () {} : onTap,
       );
+}
+
+const String semGastoReembolso = 'sem_gasto';
+
+/// Lista de gastos dos últimos 15 dias para confirmar o reembolso: valor igual ou próximo primeiro (mais recentes antes);
+/// "Ver todos" mostra também os de valor diferente.
+class SugestoesReembolso extends StatefulWidget {
+  const SugestoesReembolso({super.key, required this.sugestoes});
+  final List<MbSugestaoReembolso> sugestoes;
+
+  @override
+  State<SugestoesReembolso> createState() => _SugestoesReembolsoState();
+}
+
+class _SugestoesReembolsoState extends State<SugestoesReembolso> {
+  bool _todos = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = Theme.of(context).colorScheme;
+    final parecidos = [
+      for (final s in widget.sugestoes)
+        if (s.afinidade != MbAfinidadeReembolso.outro) s
+    ];
+    final outros = widget.sugestoes.length - parecidos.length;
+    final lista = _todos ? widget.sugestoes : parecidos;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (lista.isEmpty)
+        Padding(
+          padding: const EdgeInsetsDirectional.only(bottom: 12),
+          child: TextFont(
+              text: widget.sugestoes.isEmpty
+                  ? 'Nenhum gasto nos últimos $mbJanelaReembolsoDias dias.'
+                  : 'Nenhum gasto com valor parecido nos últimos $mbJanelaReembolsoDias dias.',
+              fontSize: 14,
+              textColor: getColor(context, "textLight")),
+        ),
+      for (final s in lista)
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => popRoute(context, s.gasto),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(vertical: 10, horizontal: 4),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  TextFont(text: s.gasto.nome, fontSize: 15, fontWeight: FontWeight.bold, maxLines: 1),
+                  TextFont(
+                      text: [
+                        diaMes(s.gasto.data),
+                        if (s.gasto.categoria.isNotEmpty) s.gasto.categoria,
+                        if (s.afinidade == MbAfinidadeReembolso.igual) 'mesmo valor',
+                      ].join(' · '),
+                      fontSize: 13,
+                      textColor: getColor(context, "textLight")),
+                ]),
+              ),
+              TextFont(text: brl(s.gasto.valor), fontSize: 15, fontWeight: FontWeight.bold),
+            ]),
+          ),
+        ),
+      const SizedBox(height: 8),
+      if (!_todos && outros > 0) ...[
+        Button(
+          label: 'Ver todos os gastos ($outros a mais)',
+          onTap: () => setState(() => _todos = true),
+          expandedLayout: true,
+          color: cor.secondaryContainer,
+          textColor: cor.onSecondaryContainer,
+        ),
+        const SizedBox(height: 8),
+      ],
+      Button(
+        label: 'Nenhum desses (abater em Outros)',
+        onTap: () => popRoute(context, semGastoReembolso),
+        expandedLayout: true,
+        color: cor.secondaryContainer,
+        textColor: cor.onSecondaryContainer,
+      ),
+    ]);
+  }
 }
