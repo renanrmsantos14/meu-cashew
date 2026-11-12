@@ -1,3 +1,4 @@
+import 'package:budget/struct/mbSync/inicioOrdem.dart' show mbMigrarOrdemInicio;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 import 'package:budget/database/tables.dart';
@@ -142,6 +143,7 @@ Future<bool> initializeSettings() async {
 
   Map<String, dynamic> defaultPreferences = await getDefaultPreferences();
 
+  mbMigrarOrdemInicio(appStateSettings);
   fixHomePageOrder(defaultPreferences, "homePageOrder");
   fixHomePageOrder(defaultPreferences, "homePageOrderFullScreen");
 

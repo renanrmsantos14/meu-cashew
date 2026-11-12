@@ -3,6 +3,7 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/detectar.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/projetarLocal.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:drift/drift.dart';
@@ -14,7 +15,8 @@ const List<String> _ordemAplicar = [
   'metas',
   'dividas',
   'lancamentos',
-  'assinaturas'
+  'assinaturas',
+  'ajustes'
 ];
 
 DateTime _proximoDia(int dia, DateTime hoje) {
@@ -117,6 +119,8 @@ Future<Projetado?> _aplicar(Registro r, Map<String, dynamic> d,
       return _objetivo(r, d, modificado);
     case 'lancamentos':
       return _lancamento(r, d, modificado, cache);
+    case 'ajustes':
+      return _ajuste(r, d, modificado);
     case 'assinaturas':
       return _assinatura(r, d, hoje, modificado, cache);
   }
@@ -193,6 +197,9 @@ Future<Projetado?> _orcamento(Registro r, Map<String, dynamic> d, DateTime hoje,
         order: Value(existente?.order ??
             await _contar(database.budgets)),
         walletFk: Value(existente?.walletFk ?? '0'),
+        // Sem filtros o Cashew somaria renda e ajuste de saldo no orçamento.
+        budgetTransactionFilters: Value(existente?.budgetTransactionFilters ??
+            [BudgetTransactionFilters.defaultBudgetTransactionFilters]),
         dateTimeModified: modificado,
       ));
   return mbProjOrcamento((await (database.select(database.budgets)
@@ -266,12 +273,29 @@ Future<Projetado?> _lancamento(Registro r, Map<String, dynamic> d,
         objectiveLoanFk: Value(l.dividaPk),
         dateTimeModified: modificado,
       ));
+  await mbGravarEscolhaDeOrcamento(l.pk, l.orcamentoPks);
   final t = await (database.select(database.transactions)
         ..where((x) => x.transactionPk.equals(l.pk)))
       .getSingle();
   final nomeCarteira =
       carteiras.where((w) => w.walletPk == carteira).map((w) => w.name).firstOrNull ?? '';
-  return mbProjLancamento(t, nomeCarteira);
+  return mbProjLancamento(t, nomeCarteira, orcamentos: l.orcamentoPks);
+}
+
+// Ajuste de uma transação `mb:` feito em outro aparelho: só a escolha de orçamentos é aplicada aqui
+// (categoria e gasto continuam vindo do mapeamento do servidor).
+Future<Projetado?> _ajuste(
+    Registro r, Map<String, dynamic> d, Value<DateTime?> modificado) async {
+  final escolha = orcamentoPksDeDados(d);
+  final txPk = 'mb:${r.id}';
+  await mbGravarEscolhaDeOrcamento(txPk, escolha);
+  await (database.update(database.transactions)
+        ..where((t) => t.transactionPk.equals(txPk)))
+      .write(TransactionsCompanion(dateTimeModified: modificado));
+  return escolha == null
+      ? null
+      : Projetado('ajustes', r.id,
+          {'orcamento_ids': (escolha.map(idDoPk).toList()..sort())}, null);
 }
 
 Future<Projetado?> _assinatura(Registro r, Map<String, dynamic> d, DateTime hoje,
@@ -327,6 +351,8 @@ Future<void> _apagar(Registro r) async {
             ..where((a) => a.associatedTitlePk.equals(pk)))
           .go();
     case 'orcamentos':
+      await database.customStatement(
+          'DELETE FROM mb_orcamento_tx WHERE orcamento_pk = ?', [pk]);
       await (database.delete(database.budgets)..where((b) => b.budgetPk.equals(pk)))
           .go();
     case 'metas':
@@ -342,6 +368,8 @@ Future<void> _apagar(Registro r) async {
           .go();
     case 'lancamentos':
     case 'assinaturas':
+      await database.customStatement(
+          'DELETE FROM mb_orcamento_tx WHERE tx_pk = ?', [pk]);
       await (database.delete(database.transactions)
             ..where((t) => t.transactionPk.equals(pk)))
           .go();

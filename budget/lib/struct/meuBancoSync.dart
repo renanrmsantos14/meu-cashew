@@ -6,6 +6,7 @@ import 'package:budget/pages/addWalletPage.dart'
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/aplicarLocal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/mbSync/detectar.dart';
@@ -219,6 +220,9 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     if (resultado.agora.isNotEmpty) estado['cursor'] = resultado.agora;
     estado[_chaveConversao] = '1';
     await mbGravarEstado(estado);
+    // Todos os orçamentos seguem o ciclo; o Geral nasce depois do pull (se o outro aparelho já o criou, ele veio).
+    mbCicloCache = mbCicloDeJson(json['ciclo']);
+    await mbGarantirOrcamentoGeral();
     // Resposta dada durante esta sincronização regrava a marca com outro valor e fica para a próxima.
     if (repuxar != null && await mbLerEstado(_chaveRepuxar) == repuxar) {
       await mbRemoverEstado(_chaveRepuxar);

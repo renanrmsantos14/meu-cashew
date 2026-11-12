@@ -4,7 +4,13 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:drift/drift.dart';
 
+/// Pertencimento N:N de transação a orçamento. Sem linhas = só o Geral (padrão); `orcamento_pk = ''` = nenhum.
+/// Tabela crua (sem migração do Drift); também é criada em `beforeOpen`, porque as consultas de orçamento a usam.
+const String mbDdlOrcamentoTx = 'CREATE TABLE IF NOT EXISTS mb_orcamento_tx ('
+    'tx_pk TEXT NOT NULL, orcamento_pk TEXT NOT NULL, PRIMARY KEY (tx_pk, orcamento_pk))';
+
 Future<void> mbCriarTabelas() async {
+  await database.customStatement(mbDdlOrcamentoTx);
   await database.customStatement(
       'CREATE TABLE IF NOT EXISTS mb_registros ('
       'tabela TEXT NOT NULL, id TEXT NOT NULL, dados TEXT, updated_at TEXT NOT NULL, '

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/emprestimos.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
 import 'package:budget/struct/mbSync/registro.dart';
@@ -185,6 +186,7 @@ final ValueNotifier<List<MbItemRevisao>> meuBancoRevisar = ValueNotifier(const [
 Future<void> mbAtualizarRevisar() async {
   try {
     await mbCriarTabelas();
+    await mbCarregarCicloCache();
     final texto = await mbLerEstado('ciclo');
     Object? ciclo;
     try {

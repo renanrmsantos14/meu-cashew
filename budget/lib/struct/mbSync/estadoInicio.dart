@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:budget/database/tables.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/meuBancoMapping.dart' show mbCarteiraInvestimentos;
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:intl/intl.dart' show NumberFormat;
@@ -347,6 +348,98 @@ Future<({ModeloInicio modelo, List<({Transaction transaction, TransactionCategor
     agora: agora,
   );
   return (modelo: modelo, transacoes: txs);
+}
+
+/// Fatura aberta de um cartão de crédito. `destaque`: vence em até 3 dias (ou já passou) e há valor a pagar.
+typedef FaturaAberta = ({String nome, double valor, DateTime? vence, int? dias, bool destaque});
+
+List<FaturaAberta> mbFaturasAbertas({
+  required List<Map<String, dynamic>> contas,
+  required Map<String, dynamic> faturas,
+  required DateTime agora,
+}) {
+  final out = <FaturaAberta>[];
+  for (final c in contas.where((c) => c['type'] == 'CREDIT')) {
+    final fat = faturas['${c['id']}'];
+    final aberta = fat is Map ? fat['open_bill'] : null;
+    final valor = aberta is Map && aberta['total_amount'] is num
+        ? _num(aberta['total_amount'])
+        : _num(c['balance']);
+    final vence = aberta is Map && _lerData('${aberta['due_date']}') != null
+        ? _lerData('${aberta['due_date']}')
+        : _proximoDia(c['due_date'], agora);
+    final dias = vence == null ? null : _soDia(vence).difference(_soDia(agora)).inDays;
+    final bruto = '${c['name']}';
+    final m = RegExp(r'\s*·(\d{4})$').firstMatch(bruto);
+    out.add((
+      nome: m == null ? bruto : bruto.substring(0, m.start),
+      valor: valor,
+      vence: vence,
+      dias: dias,
+      destaque: valor > 0 && dias != null && dias <= 3,
+    ));
+  }
+  return out;
+}
+
+/// Patrimônio = conta do Inter + investimentos − fatura atual do cartão. Empréstimos ficam de fora.
+typedef Patrimonio = ({double inter, double investimentos, double fatura, double total});
+
+Patrimonio mbPatrimonio(
+        {required double inter,
+        required double investimentos,
+        required double fatura}) =>
+    (
+      inter: inter,
+      investimentos: investimentos,
+      fatura: fatura.abs(),
+      total: inter + investimentos - fatura.abs()
+    );
+
+typedef CarteiraInicio = ({String nome, double saldo});
+typedef PatrimonioInicio = ({
+  Patrimonio patrimonio,
+  List<FaturaAberta> faturas,
+  List<CarteiraInicio> carteiras,
+  bool semDados
+});
+
+/// Dados dos cartões "Fatura do cartão" e "Patrimônio" da Início, lidos do que está no aparelho.
+Future<PatrimonioInicio> mbCarregarPatrimonioInicio(DateTime agora) async {
+  final contas = [
+    for (final c in (_decodificar(await mbLerEstado('contas')) as List? ?? const []))
+      (c as Map).cast<String, dynamic>()
+  ];
+  final faturas = ((_decodificar(await mbLerEstado('faturas')) as Map?) ?? const {})
+      .cast<String, dynamic>();
+  final abertas = mbFaturasAbertas(contas: contas, faturas: faturas, agora: agora);
+  final inter = contas
+      .where((c) => c['type'] == 'BANK' && c['subtype'] != 'SAVINGS_ACCOUNT')
+      .fold<double>(0, (s, c) => s + _num(c['balance']));
+  // Saldo por carteira: Investimentos entra no patrimônio; as demais aparecem só como informação.
+  final linhas = await database.customSelect(
+      'SELECT w.wallet_pk AS pk, w.name AS nome, COALESCE(SUM(t.amount), 0) AS saldo '
+      'FROM wallets w LEFT JOIN transactions t ON t.wallet_fk = w.wallet_pk '
+      'GROUP BY w.wallet_pk, w.name ORDER BY w."order"').get();
+  var investimentos = 0.0;
+  final carteiras = <CarteiraInicio>[];
+  for (final l in linhas) {
+    final saldo = l.read<double>('saldo');
+    if (l.read<String>('pk') == mbCarteiraInvestimentos) {
+      investimentos = saldo;
+    } else if (saldo != 0) {
+      carteiras.add((nome: l.read<String>('nome'), saldo: saldo));
+    }
+  }
+  return (
+    patrimonio: mbPatrimonio(
+        inter: inter,
+        investimentos: investimentos,
+        fatura: abertas.fold<double>(0, (s, f) => s + f.valor)),
+    faturas: abertas,
+    carteiras: carteiras,
+    semDados: contas.isEmpty
+  );
 }
 
 // Junta gatilhos de recarga em rajada (uma sync dispara o listener da sync e vários eventos

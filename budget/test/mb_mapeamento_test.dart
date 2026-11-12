@@ -52,11 +52,11 @@ void main() {
     expect(projetarCategoria(categoriaDeDados('cashew:c1', d)), d);
   });
 
-  test('ida e volta: orçamento (ids ordenados, sem periodo)', () {
+  test('ida e volta: orçamento (ids ordenados, período = ciclo)', () {
     final d = projetarOrcamento(
         OrcLocal(pk: 'o1', nome: 'Casa', valor: 900.5, categoriaPks: ['b', 'a']));
     expect(d['categoria_ids'], ['cashew:a', 'cashew:b']);
-    expect(d.containsKey('periodo'), false);
+    expect(d['periodo'], 'ciclo');
     expect(projetarOrcamento(orcamentoDeDados('cashew:o1', d)), d);
   });
 
