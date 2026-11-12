@@ -1,11 +1,8 @@
-import 'package:budget/pages/homePage/painelDesktop.dart';
-import 'package:budget/widgets/editorial/layoutDesktop.dart' show ehDesktop;
 import 'package:budget/colors.dart';
 import 'package:budget/database/generatePreviewData.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/homePage/homePageHeatmap.dart';
-import 'package:budget/pages/homePage/inicioEditorial.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/pages/homePage/homePageLineGraph.dart';
 import 'package:budget/pages/homePage/homePageNetWorth.dart';
@@ -128,9 +125,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (meuBancoPareado.value) {
-      return ehDesktop(context) ? const PainelDesktop() : const InicioEditorial();
-    }
     bool showUsername = appStateSettings["username"] != "";
     bool showGreeting = appStateSettings["enableGreetingMessage"] == true;
     Widget slidingSelector = GestureDetector(
