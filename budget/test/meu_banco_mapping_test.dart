@@ -92,4 +92,37 @@ void main() {
     expect(a.transacoes.map((t) => t.categoriaPk).toList(), b.transacoes.map((t) => t.categoriaPk).toList());
     expect(a.agora, b.agora);
   });
+
+  test("conta corrente Santander e suas transações ficam fora; poupança e cartão não", () {
+    final j = _json();
+    j["contas"] = [
+      ...j["contas"] as List,
+      {"id": "st-cc", "type": "BANK", "subtype": "CHECKING_ACCOUNT", "name": "Conta", "bank": "Santander"},
+      {"id": "st-pp", "type": "BANK", "subtype": "SAVINGS_ACCOUNT", "name": "Poupança Santander"},
+      {"id": "st-cart", "type": "CREDIT", "name": "Cartão Santander"},
+    ];
+    j["transacoes"] = [
+      ...j["transacoes"] as List,
+      {"id": "st-1", "account_id": "st-cc", "date": "2026-11-02", "description": "PIX", "amount": -30.0, "status": "POSTED", "category": "Transfers"},
+    ];
+    final r = _mapear(j);
+    expect(r.contasIgnoradasPks, {"mb:st-cc"});
+    expect(r.contas.map((c) => c.walletPk), isNot(contains("mb:st-cc")));
+    expect(r.contas.map((c) => c.walletPk), containsAll(["mb:st-pp", "mb:st-cart"]));
+    expect(r.transacoes.any((t) => t.pk == "mb:st-1"), false);
+    expect(r.ignoradas, _mapear(_json()).ignoradas + 1);
+  });
+
+  test("investimentos: null em servidor antigo; itens sem saldo descartados", () {
+    expect(_mapear(_json()).investimentos, isNull);
+    final j = _json();
+    j["investimentos"] = [
+      {"id": "i1", "nome": " CDB ", "saldo": 10, "banco": "Santander"},
+      {"id": "i2", "nome": "Sem saldo", "saldo": null},
+    ];
+    final inv = _mapear(j).investimentos!;
+    expect(inv.map((i) => [i.pk, i.nome, i.saldo, i.banco]), [
+      ["mb:inv:i1", "CDB", 10.0, "Santander"]
+    ]);
+  });
 }

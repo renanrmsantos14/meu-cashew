@@ -314,4 +314,48 @@ void main() {
     expect(cliente.enviados.where((r) => r.id == 'cashew:c1'), isNotEmpty);
     expect((await SharedPreferences.getInstance()).getString('mbNotifCursor'), isNull);
   });
+
+  test('conta corrente Santander importada antes é apagada sem mandar ajuste', () async {
+    final st = {'id': 'st', 'type': 'BANK', 'subtype': 'CHECKING_ACCOUNT', 'name': 'Conta', 'bank': 'Santander'};
+    final tx = {'id': 'st-1', 'account_id': 'st', 'date': '2025-01-10', 'description': 'Pix', 'amount': -10.0, 'category': 'Transfers', 'status': 'POSTED'};
+    // Simula o import antigo: carteira e transação mb: já aplicadas.
+    cliente.extra = {
+      'contas': [{...st, 'bank': 'Inter'}],
+      'transacoes': [tx],
+    };
+    await sync();
+    expect((await _txs()).map((t) => t.transactionPk), ['mb:st-1']);
+    cliente.enviados.clear();
+    cliente.extra = {'contas': [st], 'transacoes': [tx]};
+    await sync();
+    expect(await database.getWalletInstanceOrNull('mb:st'), isNull);
+    expect(await _txs(), isEmpty);
+    expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+    expect(await mbLerEstado('contas'), '[]');
+  });
+
+  test('investimentos viram ajuste de saldo na carteira Investimentos', () async {
+    cliente.extra = {
+      'investimentos': [
+        {'id': 'i1', 'nome': 'CDB ', 'saldo': 1500.5, 'banco': 'Santander'},
+        {'id': 'i2', 'nome': 'Fundo', 'saldo': 200.0},
+      ]
+    };
+    await sync();
+    expect(await database.getWalletInstanceOrNull('mb:investimentos'), isNotNull);
+    final cdb = (await _txs()).singleWhere((t) => t.transactionPk == 'mb:inv:i1');
+    expect([cdb.name, cdb.amount, cdb.note, cdb.categoryFk, cdb.income], ['CDB', 1500.5, 'Santander', '0', true]);
+    cliente.enviados.clear();
+    cliente.extra = {
+      'investimentos': [
+        {'id': 'i1', 'nome': 'CDB', 'saldo': 1600.0, 'banco': 'Santander'},
+      ]
+    };
+    await sync();
+    final txs = await _txs();
+    expect(txs.map((t) => t.transactionPk), ['mb:inv:i1']);
+    expect(txs.single.amount, 1600.0);
+    expect(txs.single.dateCreated, cdb.dateCreated);
+    expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+  });
 }
