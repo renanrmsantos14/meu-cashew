@@ -1,3 +1,4 @@
+import 'package:budget/struct/mbSync/notificacoes.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/addTransactionPage.dart';
@@ -43,7 +44,13 @@ Future<String?> initializeNotifications() async {
   return response;
 }
 
+@pragma('vm:entry-point')
 onSelectNotification(NotificationResponse notificationResponse) async {
+  // Alerta do Meu Banco: o botão responde a fila; o toque simples só abre o app na Início.
+  if (notificationResponse.payload?.startsWith(mbPrefixoPayload) == true) {
+    await mbTratarRespostaNotificacao(notificationResponse);
+    return;
+  }
   String? payloadData = notificationResponse.payload;
   notificationPayload = payloadData;
   runNotificationPayLoadsNoContext();

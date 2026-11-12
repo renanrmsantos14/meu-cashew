@@ -13,7 +13,7 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 - Sem rede nem token real: os testes usam cliente falso e Drift em memória.
 
 ## Roteiro
-1. `flutter test test/mb_sync_nucleo_test.dart test/mb_sync_drift_test.dart test/mb_pareamento_test.dart test/mb_pluggy_test.dart test/mb_segundo_plano_test.dart test/mb_mapeamento_test.dart test/meu_banco_mapping_test.dart test/mb_revisao_test.dart test/mb_emprestimos_test.dart test/mb_orcamentos_test.dart` → todos passam.
+1. `flutter test test/mb_sync_nucleo_test.dart test/mb_sync_drift_test.dart test/mb_pareamento_test.dart test/mb_pluggy_test.dart test/mb_segundo_plano_test.dart test/mb_mapeamento_test.dart test/meu_banco_mapping_test.dart test/mb_revisao_test.dart test/mb_emprestimos_test.dart test/mb_orcamentos_test.dart test/mb_conexao_caida_test.dart` → todos passam.
 2. `flutter analyze lib/struct/mbSync lib/struct/meuBancoSync.dart lib/pages` → sem erros novos.
 3. Se tocou em Android: `flutter build apk --debug` → "Built build/app/outputs/flutter-apk/app-debug.apk".
 4. Segurança (leitura do diff): token só em `flutter_secure_storage`, nunca em `appStateSettings`; `meubanco://parear` só grava depois de `mbConfirmarEParear`; origem só https (http só em debug para localhost/10.0.2.2); toda entrada manual de token/endereço passa pelo mesmo caminho do QR.
@@ -28,6 +28,8 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 
 - Orçamentos: modelo "todas as transações" + `mb_orcamento_tx` (sem linhas = Geral; com linhas = só os escolhidos; `''` = nenhum); período = ciclo do Worker (`mbCicloCache`, só orçamento mensal de 1 período não compartilhado); o app envia `periodo: 'ciclo'`; escolha sobe como `orcamento_ids` em `lancamentos` e `ajustes` e nunca gera ajuste/gasto 0 sozinha; apagar orçamento ou transação limpa as linhas. Não contam: transferência, empréstimo, investimento (ajuste de saldo), fatura, renda; estorno e reembolso abatem. Alerta: `mbAlertaOrcamento` (arquivo `orcamentos.dart`) devolve `oitenta`/`cem` só ao cruzar o limiar.
 - Início: ordem padrão Orçamento padrão, Para revisar, Fatura do cartão, Patrimônio, Metas, Empréstimos, Transações (`mbOrdemInicio`); `mbMigrarOrdemInicio` só troca a ordem padrão antiga e não mexe em ordem personalizada. Print da Início (390x844 fullPage e 1440x900) e da escolha de orçamentos numa transação; no web o sync apaga investimentos simulados, então insira-os depois do sync no seed temporário.
+
+- Notificações (PR 7): `mbConferirAlertas` entrega cada alerta com `chave`, `titulo`, `corpo` e `item`; `mbAcoesDoAlerta` cria os botões das respostas do item (reembolso abre o app); `mbResponderPelaNotificacao` responde a fila e ignora item que já saiu dela; o toque simples abre a Início. A faixa `HomePageConexaoCaida` (topo da Início) lê `avisos` e tem "Reconectar" (`mbAbrirConnect(itemId:)`). Print da faixa (390x844): web build, `python3 -m http.server`, Playwright, `avisos` simulados só no print. Botões, 7h e Reconectar real só em aparelho.
 
 ## Evidência obrigatória
 - Tail da saída de `flutter test` (todos passando) e de `flutter analyze`.

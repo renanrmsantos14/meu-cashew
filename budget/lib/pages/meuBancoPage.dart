@@ -1,3 +1,4 @@
+import 'package:budget/pages/homePage/homePageConexaoCaida.dart';
 import 'package:budget/pages/meuBancoParear.dart';
 import 'package:budget/struct/atualizador.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
@@ -14,8 +15,6 @@ import 'package:budget/widgets/textInput.dart';
 import 'package:budget/widgets/textWidgets.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:url_launcher/url_launcher.dart';
 
 class MeuBancoPage extends StatefulWidget {
   const MeuBancoPage({Key? key}) : super(key: key);
@@ -54,29 +53,8 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
   }
 
   Future<void> _carregarAvisos() async {
-    List<Map<String, dynamic>> avisos = [];
-    try {
-      final bruto = await mbLerEstado('avisos');
-      if (bruto != null) {
-        avisos = [
-          for (final a in jsonDecode(bruto) as List)
-            if (a is Map) Map<String, dynamic>.from(a)
-        ];
-      }
-    } catch (_) {}
+    final avisos = await mbLerAvisos();
     if (mounted) setState(() => _avisos = avisos);
-  }
-
-  Future<void> _reconectar(Map<String, dynamic> aviso) async {
-    final itemId = aviso['item_id'];
-    if (itemId is String && itemId.isNotEmpty) {
-      await mbAbrirConnect(context, itemId: itemId);
-      return;
-    }
-    final url = Uri.tryParse('${aviso['reconnect_url'] ?? ''}');
-    if (url != null && url.scheme == 'https') {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
   }
 
   @override
@@ -225,7 +203,7 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
                 Button(
                   label: "Reconectar",
                   expandedLayout: true,
-                  onTap: () => _reconectar(aviso),
+                  onTap: () => mbReconectarAviso(context, aviso),
                 ),
               ],
             ),

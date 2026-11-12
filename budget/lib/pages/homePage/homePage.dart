@@ -16,6 +16,7 @@ import 'package:budget/pages/homePage/homePageBudgets.dart';
 import 'package:budget/pages/homePage/homePageEmprestimos.dart';
 import 'package:budget/pages/homePage/homePageFaturaPatrimonio.dart';
 import 'package:budget/pages/homePage/homePageOrcamentoPadrao.dart';
+import 'package:budget/pages/homePage/homePageConexaoCaida.dart';
 import 'package:budget/pages/homePage/homePageParaRevisar.dart';
 import 'package:budget/pages/homePage/homePageUpcomingTransactions.dart';
 import 'package:budget/pages/homePage/homePageAllSpendingSummary.dart';
@@ -344,6 +345,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           )
                         : SizedBox(height: 5),
+                    // Banco desconectado (Meu Banco): faixa fixa no topo, antes das seções.
+                    HomePageConexaoCaida(),
                     // Not full screen
                     if (enableDoubleColumn(context) != true) ...[
                       KeepAliveClientMixin(child: HomePageRatingBox()),
