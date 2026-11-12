@@ -1,5 +1,6 @@
 import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
+import 'package:budget/struct/mbSync/revisao.dart' show mbCategoriaAClassificar;
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _json() => {
@@ -157,9 +158,9 @@ void main() {
       expect(mbCategoriaPropria(null), "Outros");
     });
 
-    test("as doze categorias próprias e Outros são devolvidas para criação", () {
+    test("as doze categorias próprias, Outros e A classificar são devolvidas para criação", () {
       final r = mapa([]);
-      expect(r.categoriasProprias.keys, [...mbCategoriasProprias, "Outros"]);
+      expect(r.categoriasProprias.keys, [...mbCategoriasProprias, "Outros", mbCategoriaAClassificar]);
       expect(r.categoriasProprias["Mercado"], "mb:cat:d:Mercado");
     });
 

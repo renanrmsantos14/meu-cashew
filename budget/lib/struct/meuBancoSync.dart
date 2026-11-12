@@ -12,6 +12,7 @@ import 'package:budget/struct/mbSync/detectar.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
 import 'package:budget/struct/mbSync/projetarLocal.dart';
 import 'package:budget/struct/mbSync/registro.dart';
+import 'package:budget/struct/mbSync/revisao.dart';
 import 'package:budget/struct/mbSync/widget.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
 import 'package:budget/struct/settings.dart';
@@ -28,6 +29,9 @@ const String _chaveUrl = "meu_banco_url";
 const String _chaveDesde = "meuBancoDesde";
 // Marca a conversão do histórico para as categorias próprias: uma única carga completa refaz as categorias.
 const String _chaveConversao = "conv_categorias_v1";
+// Uma decisão da fila "Para revisar" (daqui ou de outro aparelho) muda como transações antigas são mapeadas:
+// o pull incremental não as traz de volta, então a próxima sincronização refaz a carga completa.
+const String _chaveRepuxar = "repuxar_revisoes";
 
 const FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -87,6 +91,7 @@ Future<void> meuBancoAtualizarFila() async {
   try {
     await mbCriarTabelas();
     meuBancoFila.value = await mbLerFila();
+    await mbAtualizarRevisar();
   } catch (e) {
     if (kDebugMode) debugPrint("Meu Banco: falha ao ler a fila: $e");
   }
@@ -126,6 +131,20 @@ Future<void> _enviarFila(MbCliente cliente) async {
   }
 }
 
+// Puxa e grava no espelho o que venceu. `revisoes` diz se chegou decisão da fila "Para revisar".
+Future<({Map<String, dynamic> json, bool revisoes})> _puxarEAplicar(
+    MbCliente cliente, String? desde) async {
+  final json = await cliente.puxar(desde);
+  final registros = [
+    for (final r in (json['registros'] as List? ?? const []))
+      Registro.fromJson((r as Map).cast<String, dynamic>())
+  ];
+  final espelho = await mbLerEspelho();
+  final vencedores = remotosVencedores(espelho, registros);
+  await mbAplicarRegistros(vencedores, espelho);
+  return (json: json, revisoes: vencedores.any((r) => r.tabela == 'revisoes'));
+}
+
 // Retorna true se sincronizou. Nunca lança: guarda a última mensagem em meuBancoUltimoErro.
 Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
   if (meuBancoSincronizando.value) return false;
@@ -155,14 +174,14 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     await _enviarFila(cliente);
 
     final convertido = await mbLerEstado(_chaveConversao) != null;
-    final json = await cliente
-        .puxar(convertido ? await mbLerEstado('cursor') : null);
-    final registros = [
-      for (final r in (json['registros'] as List? ?? const []))
-        Registro.fromJson((r as Map).cast<String, dynamic>())
-    ];
-    espelho = await mbLerEspelho();
-    await mbAplicarRegistros(remotosVencedores(espelho, registros), espelho);
+    final desde = convertido ? await mbLerEstado('cursor') : null;
+    final repuxar = await mbLerEstado(_chaveRepuxar);
+    final puxado = await _puxarEAplicar(cliente, desde);
+    var json = puxado.json;
+    if (convertido &&
+        (puxado.revisoes || repuxar != null)) {
+      json = (await _puxarEAplicar(cliente, null)).json;
+    }
     espelho = await mbLerEspelho();
 
     final categorias = await database.select(database.categories).get();
@@ -175,6 +194,7 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
         [for (final e in espelho.values) e.registro]);
     final historico = await _comprasLocais();
     final resultado = mbMapearPull(json, ctx,
+        revisoes: MbRevisoes.deRegistros([for (final e in espelho.values) e.registro]),
         compras: historico.compras,
         abatimentos: historico.abatimentos,
         pkCategoria: (id, nome, receita) =>
@@ -199,6 +219,10 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     if (resultado.agora.isNotEmpty) estado['cursor'] = resultado.agora;
     estado[_chaveConversao] = '1';
     await mbGravarEstado(estado);
+    // Resposta dada durante esta sincronização regrava a marca com outro valor e fica para a próxima.
+    if (repuxar != null && await mbLerEstado(_chaveRepuxar) == repuxar) {
+      await mbRemoverEstado(_chaveRepuxar);
+    }
     await mbAtualizarWidget();
     meuBancoUltimoErro.value = null;
     meuBancoPareado.value = true;
@@ -406,6 +430,44 @@ Future<void> _aplicarInvestimentos(List<MbInvestimento> lista) async {
     await (database.delete(database.transactions)
           ..where((t) => t.transactionPk.isIn(sairam)))
         .go();
+  }
+}
+
+// Responde um item da fila "Para revisar" (Início, e depois as notificações do PR 7): grava a decisão no espelho
+// (a fila some na hora), manda ao servidor e remapeia as transações. `categoriaPk` só para resposta "categoria".
+// Offline ou com falha, a decisão fica pendente e vai na próxima sincronização.
+Future<void> mbResponderRevisao(MbItemRevisao item, String resposta,
+    {String? categoriaPk, MbCliente? clienteParaTeste}) async {
+  if (item.txId == null || !mbRespostasRevisao.contains(resposta)) return;
+  if (resposta == 'categoria' && categoriaPk == null) return;
+  await mbCriarTabelas();
+  await mbGravarEspelho([
+    for (final r in mbRegistrosDeResposta(item, resposta,
+        categoriaPk: categoriaPk, agora: isoMs(DateTime.now())))
+      Espelho(r, null, true, null)
+  ]);
+  await mbGravarEstado({_chaveRepuxar: isoMs(DateTime.now())});
+  await mbAtualizarRevisar();
+  await sincronizarMeuBanco(clienteParaTeste: clienteParaTeste);
+}
+
+// "Salário não detectado": marca a entrada escolhida como salário no servidor e sincroniza. Retorna o erro, se houver.
+Future<String?> mbMarcarSalario(String txId) async {
+  try {
+    final cliente = await mbClienteConfigurado();
+    if (cliente == null) return "Pareie o app com o Meu Banco primeiro.";
+    await cliente.definirSalario(txId);
+    await sincronizarMeuBanco();
+    return null;
+  } on MbErroHttp catch (e) {
+    return e.mensagem;
+  } on TimeoutException {
+    return "O Meu Banco demorou a responder. Tente de novo.";
+  } on http.ClientException {
+    return "Sem conexão com o Meu Banco.";
+  } catch (e) {
+    if (kDebugMode) debugPrint("Meu Banco: falha ao marcar o salário: $e");
+    return "Não foi possível marcar o salário agora.";
   }
 }
 

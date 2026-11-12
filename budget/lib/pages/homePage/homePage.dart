@@ -13,6 +13,7 @@ import 'package:budget/pages/homePage/homePageWalletSwitcher.dart';
 import 'package:budget/pages/homePage/homeTransactions.dart';
 import 'package:budget/pages/homePage/homePageUsername.dart';
 import 'package:budget/pages/homePage/homePageBudgets.dart';
+import 'package:budget/pages/homePage/homePageParaRevisar.dart';
 import 'package:budget/pages/homePage/homePageUpcomingTransactions.dart';
 import 'package:budget/pages/homePage/homePageAllSpendingSummary.dart';
 import 'package:budget/pages/editHomePage.dart';
@@ -190,6 +191,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
       "budgets": isHomeScreenSectionEnabled(context, "showPinnedBudgets")
           ? HomePageBudgets()
           : null,
+      // Fila "Para revisar" (Meu Banco): só aparece pareado e com itens.
+      "paraRevisar": HomePageParaRevisar(),
       "overdueUpcoming":
           isHomeScreenSectionEnabled(context, "showOverdueUpcoming")
               ? HomePageUpcomingTransactions()
