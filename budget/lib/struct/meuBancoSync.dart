@@ -26,6 +26,8 @@ const String meuBancoUrlPadrao =
 const String _chaveToken = "meu_banco_token";
 const String _chaveUrl = "meu_banco_url";
 const String _chaveDesde = "meuBancoDesde";
+// Marca a conversão do histórico para as categorias próprias: uma única carga completa refaz as categorias.
+const String _chaveConversao = "conv_categorias_v1";
 
 const FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -152,7 +154,9 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     ]);
     await _enviarFila(cliente);
 
-    final json = await cliente.puxar(await mbLerEstado('cursor'));
+    final convertido = await mbLerEstado(_chaveConversao) != null;
+    final json = await cliente
+        .puxar(convertido ? await mbLerEstado('cursor') : null);
     final registros = [
       for (final r in (json['registros'] as List? ?? const []))
         Registro.fromJson((r as Map).cast<String, dynamic>())
@@ -161,17 +165,21 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     await mbAplicarRegistros(remotosVencedores(espelho, registros), espelho);
     espelho = await mbLerEspelho();
 
-    final locais = {
-      for (final c in await database.select(database.categories).get())
-        c.categoryPk
+    final categorias = await database.select(database.categories).get();
+    final locais = {for (final c in categorias) c.categoryPk};
+    // Categoria do Cashew com o mesmo nome e tipo é reutilizada em vez de criar outra "mb:cat:".
+    final porNome = {
+      for (final c in categorias) '${c.income}:${c.name.toLowerCase()}': c.categoryPk
     };
     final ctx = MbContextoCategoria.deRegistros(
         [for (final e in espelho.values) e.registro]);
     final resultado = mbMapearPull(json, ctx,
+        compras: await _comprasLocais(),
         pkCategoria: (id, nome, receita) =>
             id != null && locais.contains(pkDoId(id))
                 ? pkDoId(id)
-                : mbPkCategoria(nome, receita));
+                : porNome['$receita:${nome.toLowerCase()}'] ??
+                    mbPkCategoria(nome, receita));
     // Uma transação só: 1 commit em vez de N e 1 notificação aos streams (as telas recarregavam a cada insert).
     await database.transaction(() => _aplicar(resultado));
 
@@ -187,6 +195,7 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
       'sincronizado_em': '${json['sincronizado_em'] ?? ''}',
     };
     if (resultado.agora.isNotEmpty) estado['cursor'] = resultado.agora;
+    estado[_chaveConversao] = '1';
     await mbGravarEstado(estado);
     await mbAtualizarWidget();
     meuBancoUltimoErro.value = null;
@@ -232,25 +241,33 @@ Future<void> _aplicar(MbResultado r) async {
   for (final conta in r.contas) {
     await _criarCarteiraSeFaltar(conta.walletPk, conta.nome);
   }
-  // Categorias por nome: criadas se faltarem.
+  // Categorias por nome: criadas se faltarem. As próprias existem sempre, mesmo sem transação.
   final categoriasVistas = <String>{};
-  for (final t in r.transacoes) {
-    if (!categoriasVistas.add(t.categoriaPk)) continue;
-    if (await database.getCategoryInstanceOrNull(t.categoriaPk) != null) continue;
+  Future<void> criarCategoriaSeFaltar(String pk, String nome, bool receita) async {
+    if (!categoriasVistas.add(pk)) return;
+    if (await database.getCategoryInstanceOrNull(pk) != null) return;
     await database.createOrUpdateCategory(
       TransactionCategory(
-        categoryPk: t.categoriaPk,
-        name: t.categoriaNome,
+        categoryPk: pk,
+        name: nome,
         dateCreated: DateTime.now(),
         dateTimeModified: null,
         order: await database.getAmountOfCategories(),
-        income: t.receita,
+        income: receita,
         iconName: "image.png",
         methodAdded: MethodAdded.csv,
       ),
       updateSharedEntry: false,
       customDateTimeModified: _semEdicao,
     );
+  }
+
+  for (final e in r.categoriasProprias.entries) {
+    await criarCategoriaSeFaltar(e.value, e.key, false);
+  }
+  for (final t in r.transacoes) {
+    // Estorno e cashback entram como despesa (valor positivo), então a categoria é de despesa.
+    await criarCategoriaSeFaltar(t.categoriaPk, t.categoriaNome, t.receita);
   }
   // Upsert idempotente pelo pk "mb:<id>", direto no Drift (createOrUpdateTransaction marcaria a categoria como editada).
   for (final t in r.transacoes) {
@@ -273,6 +290,18 @@ Future<void> _aplicar(MbResultado r) async {
         );
   }
   final removidos = <String>[];
+  // Importada antes de virar "não é gasto" (transferência): sai do app, sem ajuste para o servidor.
+  if (r.naoGastoPks.isNotEmpty) {
+    final alvos = r.naoGastoPks.toList();
+    final existentes = await (database.select(database.transactions)
+          ..where((t) => t.transactionPk.isIn(alvos)))
+        .get();
+    removidos.addAll(existentes.map((t) => t.transactionPk));
+    // Direto no Drift, como nas contas ignoradas: sem "apagados recentemente".
+    await (database.delete(database.transactions)
+          ..where((t) => t.transactionPk.isIn(alvos)))
+        .go();
+  }
   // Conta ignorada importada antes desta regra: apaga a carteira e os lançamentos dela.
   // Os pks saem de mb_aplicado; senão a projeção os veria como apagados e mandaria "não é gasto" ao servidor.
   for (final pk in r.contasIgnoradasPks) {
@@ -306,6 +335,16 @@ Future<void> _aplicar(MbResultado r) async {
   await mbGravarAplicado({for (final t in r.transacoes) t.pk: t.categoriaPk},
       removidos);
 }
+
+// Despesas `mb:` já no app: um estorno novo pode abater uma compra de um pull anterior.
+Future<List<MbCompra>> _comprasLocais() async => [
+      for (final t in await (database.select(database.transactions)
+            ..where((t) =>
+                t.transactionPk.like('mb:%') & t.amount.isSmallerThanValue(0)))
+          .get())
+        MbCompra(t.transactionPk, mbNormalizarEstabelecimento(t.name),
+            (-t.amount * 100).round(), t.dateCreated, '', t.categoryFk)
+    ];
 
 // Cada investimento vira um ajuste de saldo (categoria "0", fora de gastos e receitas) na carteira "Investimentos",
 // com o saldo atual. A data do primeiro import é mantida para não aparecer como lançamento novo a cada sync.

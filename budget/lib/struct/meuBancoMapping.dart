@@ -136,6 +136,65 @@ const Map<String, String> mbCategorias = {
   "Other": "Outros",
 };
 
+// Categorias próprias do usuário. As despesas da Pluggy são convertidas para estas (o que não casar vira "Outros").
+const List<String> mbCategoriasProprias = [
+  "Mercado", "Casa", "Saúde", "Transporte", "Alimentação fora", "Lazer",
+  "Compras", "Assinaturas", "Educação", "Tarifas", "Família", "Presentes",
+];
+const String mbCategoriaOutros = "Outros";
+// Cashback abate o gasto em Compras (valor positivo numa categoria de despesa).
+const String mbCategoriaCashback = "Compras";
+
+const Map<String, List<String>> _pluggyPorCategoriaPropria = {
+  "Mercado": ["Groceries"],
+  "Casa": [
+    "Housing", "Rent", "Utilities", "Water", "Electricity", "Gas", "Houseware",
+    "Urban land and building tax", "Home insurance", "Real estate financing",
+    "Telecommunications", "Internet", "Mobile",
+  ],
+  "Saúde": [
+    "Healthcare", "Dentist", "Pharmacy", "Optometry", "Hospital clinics and labs",
+    "Health insurance", "Wellness and fitness", "Gyms and fitness centers",
+    "Sports practice", "Wellness",
+  ],
+  "Transporte": [
+    "Transportation", "Taxi and ride-hailing", "Public transportation", "Car rental",
+    "Bicycle", "Automotive", "Gas stations", "Parking", "Tolls and in vehicle payment",
+    "Vehicle ownership taxes and fees", "Vehicle maintenance", "Traffic tickets",
+    "Vehicle insurance", "Vehicle financing",
+  ],
+  "Alimentação fora": ["Food and drinks", "Eating out", "Food delivery"],
+  "Lazer": [
+    "Leisure", "Tickets", "Stadiums and arenas", "Landmarks and museums",
+    "Cinema, theater and concerts", "Gaming", "Travel", "Airport and airlines",
+    "Accommodation", "Mileage programs", "Bus tickets", "Gambling", "Lottery", "Online bet",
+  ],
+  "Compras": [
+    "Shopping", "Online shopping", "Electronics", "Pet supplies and vet", "Clothing",
+    "Kids and toys", "Sports goods", "Office supplies", "Cashback",
+  ],
+  "Assinaturas": ["Digital services", "Video streaming", "Music streaming", "TV"],
+  "Educação": [
+    "Education", "Online courses", "University", "School", "Kindergarten",
+    "Bookstore", "Student loan",
+  ],
+  "Tarifas": [
+    "Bank fees", "Account fees", "Wire transfer fees and ATM fees", "Credit card fees",
+    "Late payment and overdraft costs", "Interests charged", "Tax on financial operations",
+    "Taxes", "Income taxes", "Taxes on investments",
+  ],
+  "Família": ["Alimony"],
+  "Presentes": ["Donations"],
+};
+
+final Map<String, String> _categoriaPropriaPorPluggy = {
+  for (final e in _pluggyPorCategoriaPropria.entries)
+    for (final p in e.value) p: e.key
+};
+
+String mbCategoriaPropria(String? pluggy) =>
+    _categoriaPropriaPorPluggy[pluggy] ?? mbCategoriaOutros;
+
 String mbTraduzirCategoria(String? c) {
   if (c == null || c.isEmpty) return "Sem categoria";
   return mbCategorias[c] ?? c;
@@ -151,6 +210,38 @@ final RegExp _descFora = RegExp(
 
 bool mbNaoEhGasto(String? categoria, String? descricao) =>
     _catFora.hasMatch(categoria ?? "") || _descFora.hasMatch(descricao ?? "");
+
+// Resgate do Santander que chega ao Inter: entrada vinda do Santander é transferência, não renda.
+final RegExp _descSantander = RegExp(r"santander", caseSensitive: false);
+
+bool mbEhResgateSantander(String? banco, double valor, String? descricao) =>
+    valor > 0 &&
+    !_descSantander.hasMatch(banco ?? "") &&
+    _descSantander.hasMatch(descricao ?? "");
+
+final RegExp _descCashback = RegExp(r"cashback", caseSensitive: false);
+
+bool mbEhCashback(String? categoria, String? descricao, double valor) =>
+    valor > 0 &&
+    (categoria == "Cashback" || _descCashback.hasMatch(descricao ?? ""));
+
+// Compara estabelecimentos ignorando caixa, acentos, pontuação e o prefixo "Estorno".
+String mbNormalizarEstabelecimento(String s) {
+  const de = "áàâãäéèêëíìîïóòôõöúùûüç";
+  const para = "aaaaaeeeeiiiiooooouuuuc";
+  final b = StringBuffer();
+  for (final c in s.toLowerCase().split("")) {
+    final i = de.indexOf(c);
+    b.write(i >= 0 ? para[i] : c);
+  }
+  return b
+      .toString()
+      .replaceAll(RegExp(r"^\s*(estorno|devolucao|reembolso)\b"), "")
+      .replaceAll(RegExp(r"[^a-z0-9]+"), " ")
+      .trim();
+}
+
+const int mbJanelaEstornoDias = 60;
 
 // Conta corrente do Santander é usada por outra pessoa: não entra no app (só os investimentos de lá contam).
 final RegExp _bancoIgnorado = RegExp(r"santander", caseSensitive: false);
@@ -177,6 +268,18 @@ class MbConta {
   const MbConta(this.walletPk, this.nome, this.cartao);
 }
 
+// Despesa já importada (ou do mesmo pull) que um estorno pode abater.
+class MbCompra {
+  final String pk;
+  final String estabelecimento;
+  final int centavos;
+  final DateTime data;
+  final String categoriaNome;
+  final String categoriaPk;
+  const MbCompra(this.pk, this.estabelecimento, this.centavos, this.data,
+      this.categoriaNome, this.categoriaPk);
+}
+
 class MbTransacao {
   final String pk;
   final String nome;
@@ -189,6 +292,12 @@ class MbTransacao {
   final String categoriaNome;
   final String categoriaPk;
   final bool pendente;
+  // Estorno e cashback entram como valor positivo numa categoria de despesa, para abater o gasto.
+  MbTransacao abatendo(String categoriaNome, String categoriaPk) => MbTransacao(
+      pk: pk, nome: nome, valor: valor, receita: false, nota: nota, data: data,
+      carteiraPk: carteiraPk, categoriaNome: categoriaNome,
+      categoriaPk: categoriaPk, pendente: pendente);
+
   const MbTransacao({
     required this.pk,
     required this.nome,
@@ -221,6 +330,10 @@ class MbResultado {
   final Set<String> contasIgnoradasPks;
   // null = servidor antigo, sem investimentos (não mexe na carteira)
   final List<MbInvestimento>? investimentos;
+  // transações descartadas pelas regras de "não é gasto" (a apagar se já existirem)
+  final Set<String> naoGastoPks;
+  // categorias próprias (nome -> pk) que precisam existir
+  final Map<String, String> categoriasProprias;
   const MbResultado(
     this.agora,
     this.contas,
@@ -235,6 +348,8 @@ class MbResultado {
     this.sincronizadoEm,
     this.contasIgnoradasPks = const {},
     this.investimentos,
+    this.naoGastoPks = const {},
+    this.categoriasProprias = const {},
   });
 }
 
@@ -257,10 +372,12 @@ Map<String, dynamic> _mapa(Object? v) =>
 
 MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     {required String Function(String? catId, String nomeTraduzido, bool receita)
-        pkCategoria}) {
+        pkCategoria,
+    List<MbCompra> compras = const []}) {
   final contas = <MbConta>[];
   final brutas = <Map<String, dynamic>>[];
   final cartoes = <String, bool>{};
+  final bancos = <String, String>{};
   final ignoradasPks = <String>{};
   for (final c in (json["contas"] as List? ?? const [])) {
     final id = c["id"].toString();
@@ -270,11 +387,15 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     }
     final cartao = c["type"] == "CREDIT";
     cartoes[id] = cartao;
+    bancos[id] = (c["bank"] ?? "").toString();
     brutas.add(_mapa(c));
     contas.add(MbConta(mbPkConta(id), (c["name"] ?? id).toString(), cartao));
   }
   final transacoes = <MbTransacao>[];
   int ignoradas = 0;
+  final naoGasto = <String>{};
+  // Receitas sem ajuste ou regra do usuário: candidatas a estorno de uma compra.
+  final estornos = <String>{};
   for (final t in (json["transacoes"] as List? ?? const [])) {
     final id = t["id"].toString();
     if (ignoradasPks.contains(mbPkConta(t["account_id"].toString())) ||
@@ -289,15 +410,18 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     }
     final categoria = t["category"] as String?;
     final descricao = (t["description"] ?? t["merchant"] ?? "").toString();
-    if (gasto != 1 && mbNaoEhGasto(categoria, descricao)) {
-      ignoradas++;
-      continue;
-    }
     final bruto = (t["amount"] as num).toDouble();
     final contaId = t["account_id"].toString();
     final cartao = cartoes[contaId] ?? false;
     // Cartão: compra positiva vira despesa (negativa), estorno vira receita. Conta: o sinal já é o do Cashew.
     final valor = cartao ? -bruto : bruto;
+    if (gasto != 1 &&
+        (mbNaoEhGasto(categoria, descricao) ||
+            mbEhResgateSantander(bancos[contaId], valor, descricao))) {
+      naoGasto.add(mbPkTransacao(id));
+      ignoradas++;
+      continue;
+    }
     if (valor == 0) {
       ignoradas++;
       continue;
@@ -310,10 +434,16 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
         categoriaPluggy: categoria,
         receita: receita,
         ctx: ctx);
-    final nomeCategoria = mbTraduzirCategoria(ef.category ?? categoria);
+    // Sem categoria do usuário (ajuste, regra ou servidor): despesa vai para as categorias próprias.
+    final nomeCategoria = ef.fonte == 'banco' && !receita
+        ? mbCategoriaPropria(categoria)
+        : mbTraduzirCategoria(ef.category ?? categoria);
     final pendente = t["status"] == "PENDING";
     final nome = descricao.trim().isEmpty ? "Sem descrição" : descricao.trim();
-    transacoes.add(MbTransacao(
+    final automatica = receita && ef.fonte != 'ajuste' && ef.fonte != 'regra';
+    final cashback = automatica && mbEhCashback(categoria, descricao, valor);
+    if (automatica && !cashback) estornos.add(mbPkTransacao(id));
+    final tx = MbTransacao(
       pk: mbPkTransacao(id),
       nome: nome,
       valor: valor,
@@ -324,8 +454,13 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
       categoriaNome: nomeCategoria,
       categoriaPk: pkCategoria(ef.categoriaId, nomeCategoria, receita),
       pendente: pendente,
-    ));
+    );
+    transacoes.add(cashback
+        ? tx.abatendo(mbCategoriaCashback,
+            pkCategoria(null, mbCategoriaCashback, false))
+        : tx);
   }
+  _abaterEstornos(transacoes, estornos, compras);
   final pendentes = <String>{
     for (final id in (json["pendentes"] as List? ?? const []))
       mbPkTransacao(id.toString())
@@ -343,6 +478,11 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     config: _mapa(json["config"]),
     sincronizadoEm: json["sincronizado_em"] as String?,
     contasIgnoradasPks: ignoradasPks,
+    naoGastoPks: naoGasto,
+    categoriasProprias: {
+      for (final n in [...mbCategoriasProprias, mbCategoriaOutros])
+        n: pkCategoria(null, n, false)
+    },
     investimentos: json["investimentos"] is List
         ? [
             for (final i in json["investimentos"] as List)
@@ -355,4 +495,39 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
           ]
         : null,
   );
+}
+
+// Estorno (mesmo valor e estabelecimento de uma compra nos 60 dias anteriores) abate o gasto: vira valor
+// positivo na categoria da compra, em vez de renda. `locais` são compras de pulls anteriores.
+void _abaterEstornos(
+    List<MbTransacao> transacoes, Set<String> estornos, List<MbCompra> locais) {
+  final pks = {for (final t in transacoes) t.pk};
+  final compras = <MbCompra>[
+    for (final t in transacoes)
+      if (t.valor < 0)
+        MbCompra(t.pk, mbNormalizarEstabelecimento(t.nome),
+            (-t.valor * 100).round(), t.data, t.categoriaNome, t.categoriaPk),
+    for (final c in locais)
+      if (!pks.contains(c.pk)) c,
+  ];
+  final usadas = <String>{};
+  for (var i = 0; i < transacoes.length; i++) {
+    final t = transacoes[i];
+    if (!estornos.contains(t.pk)) continue;
+    final nome = mbNormalizarEstabelecimento(t.nome);
+    final centavos = (t.valor * 100).round();
+    MbCompra? alvo;
+    for (final c in compras) {
+      final dias = t.data.difference(c.data).inDays;
+      if (c.centavos != centavos ||
+          c.estabelecimento != nome ||
+          dias < 0 ||
+          dias > mbJanelaEstornoDias ||
+          usadas.contains(c.pk)) continue;
+      if (alvo == null || c.data.isAfter(alvo.data)) alvo = c;
+    }
+    if (alvo == null) continue;
+    usadas.add(alvo.pk);
+    transacoes[i] = t.abatendo(alvo.categoriaNome, alvo.categoriaPk);
+  }
 }
