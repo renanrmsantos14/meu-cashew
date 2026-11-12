@@ -13,6 +13,7 @@ import 'package:budget/pages/homePage/homePageWalletSwitcher.dart';
 import 'package:budget/pages/homePage/homeTransactions.dart';
 import 'package:budget/pages/homePage/homePageUsername.dart';
 import 'package:budget/pages/homePage/homePageBudgets.dart';
+import 'package:budget/pages/homePage/homePageEmprestimos.dart';
 import 'package:budget/pages/homePage/homePageParaRevisar.dart';
 import 'package:budget/pages/homePage/homePageUpcomingTransactions.dart';
 import 'package:budget/pages/homePage/homePageAllSpendingSummary.dart';
@@ -204,6 +205,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
       "netWorth": isHomeScreenSectionEnabled(context, "showNetWorth")
           ? HomePageNetWorth()
           : null,
+      // Empréstimos ao pai (Meu Banco): some sem empréstimo em aberto.
+      "emprestimos": HomePageEmprestimos(),
       "objectives": isHomeScreenSectionEnabled(context, "showObjectives")
           ? HomePageObjectives(objectiveType: ObjectiveType.goal)
           : null,

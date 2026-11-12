@@ -6,6 +6,8 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
+import 'package:budget/struct/mbSync/emprestimos.dart';
+import 'package:budget/struct/mbSync/reembolso.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/mbSync/revisao.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
@@ -41,6 +43,11 @@ Registro _decisao(String tx, String resposta, {String? categoriaId, String? dest
       'tipo': 'decisao', 'tx_id': tx, 'resposta': resposta,
       if (categoriaId != null) 'categoria_id': categoriaId,
       if (dest != null) 'destinatario': dest,
+    }, '2026-11-11T00:00:00.000Z', null);
+
+Registro _decisaoReembolso(String tx, String gasto) =>
+    Registro('revisoes', 'tx:$tx', {
+      'tipo': 'decisao', 'tx_id': tx, 'resposta': 'reembolso', 'reembolso_de': gasto,
     }, '2026-11-11T00:00:00.000Z', null);
 
 Registro _destino(String nome, String categoriaId) =>
@@ -145,6 +152,44 @@ void main() {
     test('reembolso abate o gasto como estorno genérico em Outros', () {
       final t = _t(_mapear([_tx('r1', 'Pix recebido: Maria', 60)], regs: [_decisao('r1', 'reembolso')]), 'r1');
       expect([t.valor, t.receita, t.categoriaNome], [60, false, mbCategoriaOutros]);
+    });
+
+    test('reembolso com gasto confirmado abate aquele gasto, na categoria dele', () {
+      final r = _mapear(
+          [_tx('g1', 'RESTAURANTE', -60, data: '2026-11-08', categoria: 'Eating out'), _tx('r1', 'Pix recebido: Maria', 60)],
+          regs: [_decisaoReembolso('r1', 'g1')]);
+      final t = _t(r, 'r1');
+      expect([t.valor, t.receita, t.categoriaNome], [60, false, 'Alimentação fora']);
+      expect(_t(r, 'g1').categoriaNome, 'Alimentação fora');
+    });
+
+    test('reembolso vinculado a gasto de pulls anteriores usa a categoria dele; sem o gasto, cai em Outros', () {
+      final comGasto = mbMapearPull(_json([_tx('r1', 'Pix recebido: Maria', 60)]), _ctx0,
+          revisoes: MbRevisoes.deRegistros([_decisaoReembolso('r1', 'g1')]),
+          compras: [MbCompra('mb:g1', 'X', 6000, DateTime(2026, 11, 8), '', 'cat-local')],
+          pkCategoria: (id, nome, receita) => id ?? mbPkCategoria(nome, receita));
+      expect(comGasto.transacoes.single.categoriaPk, 'cat-local');
+      final semGasto = _mapear([_tx('r1', 'Pix recebido: Maria', 60)], regs: [_decisaoReembolso('r1', 'sumiu')]);
+      expect(semGasto.transacoes.single.categoriaNome, mbCategoriaOutros);
+    });
+
+    test('gasto vinculado não é consumido por estorno automático', () {
+      final r = _mapear([
+        _tx('g1', 'RESTAURANTE', -60, data: '2026-11-06'),
+        _tx('g2', 'RESTAURANTE', -60, data: '2026-11-08', categoria: 'Eating out'),
+        _tx('r1', 'Pix recebido: Maria', 60, data: '2026-11-09'),
+        _tx('e1', 'RESTAURANTE', 60, data: '2026-11-10'),
+      ], regs: [_decisaoReembolso('r1', 'g2')]);
+      expect(_t(r, 'r1').categoriaNome, 'Alimentação fora');
+      expect(_t(r, 'e1').valor, 60);
+      expect(_t(r, 'e1').receita, false); // o estorno ficou com g1, que sobrou
+    });
+
+    test('empréstimo e devolução não geram transação nem ajuste', () {
+      final r = _mapear([_tx('e1', 'PIX ENVIADO SANTANDER', -800), _tx('d1', 'Pix recebido: Pai', 300)],
+          regs: [_decisao('e1', 'emprestimo'), _decisao('d1', 'devolucao')]);
+      expect(r.transacoes, isEmpty);
+      expect(r.naoGastoPks, {'mb:e1', 'mb:d1'});
     });
 
     test('renda fica como receita e não vira estorno de compra', () {
@@ -270,6 +315,81 @@ void main() {
       await sync();
       final t = await tx('mb:e1');
       expect([t.amount, t.categoryFk], [-800, 'mb:cat:d:$mbCategoriaAjuda']);
+    });
+
+    test('reembolso com gasto confirmado grava o vínculo, abate o gasto e não gera ajuste', () async {
+      cliente.transacoes = [
+        _tx('g1', 'RESTAURANTE', -60, data: _hoje(), categoria: 'Eating out'),
+        _tx('r1', 'Pix recebido: Maria', 60, data: _hoje()),
+      ];
+      cliente.ciclo = {'inicio': _hoje(), 'revisar': [
+        {'id': 'tx:r1', 'tipo': 'pix_recebido', 'tx_id': 'r1', 'data': _hoje(), 'descricao': 'Pix recebido: Maria', 'valor': 60}]};
+      await sync();
+      expect((await tx('mb:r1')).categoryFk, isNot('mb:cat:d:Alimentação fora')); // ainda renda
+      cliente.enviados.clear();
+      await mbResponderRevisao(meuBancoRevisar.value.single, 'reembolso', reembolsoDe: 'g1', clienteParaTeste: cliente);
+
+      final r1 = await tx('mb:r1'), g1 = await tx('mb:g1');
+      expect([r1.income, r1.amount, r1.categoryFk], [false, 60, g1.categoryFk]);
+      final d = cliente.enviados.lastWhere((r) => r.id == 'tx:r1').dados!;
+      expect([d['resposta'], d['reembolso_de']], ['reembolso', 'g1']);
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+      expect((await mbLerAplicado())['mb:r1'], g1.categoryFk);
+    });
+
+    test('vínculo vindo de outro aparelho remapeia o reembolso no pull seguinte', () async {
+      cliente.transacoes = [
+        _tx('g1', 'RESTAURANTE', -60, data: _hoje(), categoria: 'Eating out'),
+        _tx('r1', 'Pix recebido: Maria', 60, data: _hoje()),
+      ];
+      cliente.ciclo = {'inicio': _hoje()};
+      await sync();
+      cliente.servidor.add(Registro('revisoes', 'tx:r1',
+          {'tipo': 'decisao', 'tx_id': 'r1', 'resposta': 'reembolso', 'reembolso_de': 'g1'},
+          '2099-01-01T00:00:00.000Z', null));
+      await sync();
+      expect((await tx('mb:r1')).categoryFk, (await tx('mb:g1')).categoryFk);
+    });
+
+    test('reembolso sem escolher gasto continua em Outros', () async {
+      cliente.transacoes = [_tx('r1', 'Pix recebido: Maria', 60, data: _hoje())];
+      cliente.ciclo = {'inicio': _hoje(), 'revisar': [
+        {'id': 'tx:r1', 'tipo': 'pix_recebido', 'tx_id': 'r1', 'data': _hoje(), 'descricao': 'Pix recebido: Maria', 'valor': 60}]};
+      await sync();
+      await mbResponderRevisao(meuBancoRevisar.value.single, 'reembolso', clienteParaTeste: cliente);
+      expect((await tx('mb:r1')).categoryFk, 'mb:cat:d:$mbCategoriaOutros');
+      expect(cliente.enviados.lastWhere((r) => r.id == 'tx:r1').dados!.containsKey('reembolso_de'), false);
+    });
+
+    test('sugestões do banco: gastos recentes do mesmo valor', () async {
+      cliente.transacoes = [
+        _tx('g1', 'RESTAURANTE', -60, data: _hoje()),
+        _tx('g2', 'PADARIA', -60, data: _hoje()),
+        _tx('r1', 'Pix recebido: Maria', 60, data: _hoje()),
+      ];
+      cliente.ciclo = {'inicio': _hoje()};
+      await sync();
+      final item = MbItemRevisao('tx:r1', 'pix_recebido', txId: 'r1', data: _hoje(), valor: 60);
+      final s = await mbSugestoesDoItem(item);
+      expect([for (final x in s) x.gasto.pk].toSet(), {'mb:g1', 'mb:g2'});
+    });
+
+    test('empréstimos em aberto: respondidos aparecem e a devolução abate', () async {
+      cliente.transacoes = [
+        _tx('e1', 'PIX ENVIADO SANTANDER', -800, data: _hoje()),
+        _tx('d1', 'Pix recebido: Pai', 300, data: _hoje()),
+      ];
+      cliente.ciclo = {'inicio': _hoje(), 'revisar': [
+        {'id': 'tx:e1', 'tipo': 'envio_santander', 'tx_id': 'e1', 'data': _hoje(), 'descricao': 'PIX ENVIADO SANTANDER', 'valor': 800},
+        {'id': 'tx:d1', 'tipo': 'pix_recebido', 'tx_id': 'd1', 'data': _hoje(), 'descricao': 'Pix recebido: Pai', 'valor': 300}]};
+      await sync();
+      expect(meuBancoEmprestimos.value.abertos, isEmpty);
+      await mbResponderRevisao(meuBancoRevisar.value.firstWhere((i) => i.txId == 'e1'), 'emprestimo', clienteParaTeste: cliente);
+      expect(meuBancoEmprestimos.value.devido, 800);
+      await mbResponderRevisao(meuBancoRevisar.value.single, 'devolucao', clienteParaTeste: cliente);
+      expect([meuBancoEmprestimos.value.devido, meuBancoEmprestimos.value.abertos.single.original], [500, 800]);
+      expect((await database.select(database.transactions).get()).where((t) => t.transactionPk.startsWith('mb:e1') || t.transactionPk.startsWith('mb:d1')), isEmpty);
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
     });
 
     test('Empréstimo respondido não conta e o registro fica para o PR 4 ler', () async {

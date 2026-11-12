@@ -5,7 +5,7 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 # Verificar Meu Banco
 
 ## Cobre
-- Código: `budget/lib/struct/mbSync/**`, `budget/lib/struct/meuBancoSync.dart`, `meuBancoMapping.dart`, `budget/lib/struct/mbSync/revisao.dart` (fila "Para revisar"), `budget/lib/pages/homePage/homePageParaRevisar.dart`, `budget/lib/pages/meuBancoPage.dart`, `meuBancoParear.dart`, `meuBancoConectar.dart`, `budget/lib/widgets/util/appLinks.dart`, manifest e widget Android.
+- Código: `budget/lib/struct/mbSync/**`, `budget/lib/struct/meuBancoSync.dart`, `meuBancoMapping.dart`, `budget/lib/struct/mbSync/revisao.dart` (fila "Para revisar"), `budget/lib/struct/mbSync/emprestimos.dart`, `budget/lib/struct/mbSync/reembolso.dart`, `budget/lib/pages/homePage/homePageParaRevisar.dart`, `budget/lib/pages/homePage/homePageEmprestimos.dart`, `budget/lib/pages/meuBancoPage.dart`, `meuBancoParear.dart`, `meuBancoConectar.dart`, `budget/lib/widgets/util/appLinks.dart`, manifest e widget Android.
 - Schema do Drift continua em 46: as tabelas `mb_registros`, `mb_estado` e `mb_aplicado` nascem por `mbCriarTabelas()`, fora do Drift.
 
 ## Preparar ambiente
@@ -13,7 +13,7 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 - Sem rede nem token real: os testes usam cliente falso e Drift em memória.
 
 ## Roteiro
-1. `flutter test test/mb_sync_nucleo_test.dart test/mb_sync_drift_test.dart test/mb_pareamento_test.dart test/mb_pluggy_test.dart test/mb_segundo_plano_test.dart test/mb_mapeamento_test.dart test/meu_banco_mapping_test.dart test/mb_revisao_test.dart` → todos passam.
+1. `flutter test test/mb_sync_nucleo_test.dart test/mb_sync_drift_test.dart test/mb_pareamento_test.dart test/mb_pluggy_test.dart test/mb_segundo_plano_test.dart test/mb_mapeamento_test.dart test/meu_banco_mapping_test.dart test/mb_revisao_test.dart test/mb_emprestimos_test.dart` → todos passam.
 2. `flutter analyze lib/struct/mbSync lib/struct/meuBancoSync.dart lib/pages` → sem erros novos.
 3. Se tocou em Android: `flutter build apk --debug` → "Built build/app/outputs/flutter-apk/app-debug.apk".
 4. Segurança (leitura do diff): token só em `flutter_secure_storage`, nunca em `appStateSettings`; `meubanco://parear` só grava depois de `mbConfirmarEParear`; origem só https (http só em debug para localhost/10.0.2.2); toda entrada manual de token/endereço passa pelo mesmo caminho do QR.
@@ -24,6 +24,7 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 - Token inválido (401) e limite de 30 min (429) mostram mensagem fixa em pt-BR.
 
 - Fila "Para revisar": a decisão vai em `revisoes` (id `tx:<id>` e `dest:<NOME>`), remapeia por re-pull completo e nunca gera `ajustes`; Santander só é gasto com resposta `ajuda`; Pix recebido decidido nunca vira salário nem estorno automático. Print da Início (390x844 e 1440x900) com o cartão: build web, `python3 -m http.server`, Playwright; dados simulados só temporários.
+- Empréstimos ao pai: derivados das decisões `emprestimo`/`devolucao` (sem transação nem ajuste); devolução abate FIFO cronológico, excedente é descartado; o bloco "Empréstimos em aberto" some sem nenhum aberto. Reembolso: a folha de sugestão (gastos de 15 dias, igual/próximo primeiro, mais recentes antes) grava `reembolso_de` na decisão; sem escolha, abate em "Outros". Print da Início com o bloco e da folha de sugestão (390x844).
 
 ## Evidência obrigatória
 - Tail da saída de `flutter test` (todos passando) e de `flutter analyze`.

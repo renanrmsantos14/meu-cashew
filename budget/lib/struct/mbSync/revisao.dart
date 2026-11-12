@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:budget/struct/mbSync/armazem.dart';
+import 'package:budget/struct/mbSync/emprestimos.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
@@ -11,8 +12,8 @@ import 'package:flutter/foundation.dart';
 // Decisões e memória por destinatário ficam na tabela `revisoes` do `registros` (sincronizada entre aparelhos):
 //   id `tx:<transação>`  { tipo: "decisao", tx_id, resposta, categoria_id?, valor, data, descricao }
 //   id `dest:<nome>`     { tipo: "destinatario", destinatario, categoria_id }
-// O PR 4 lê empréstimos, devoluções e reembolsos filtrando `revisoes` com tipo "decisao" e resposta
-// "emprestimo" | "devolucao" | "reembolso". A regra de tipo é a mesma de apps/worker/src/revisao.js (tipoDeRevisao).
+// Empréstimos e devoluções (emprestimos.dart) e reembolsos (`reembolso_de` = id do gasto reembolsado) saem das decisões
+// com resposta "emprestimo" | "devolucao" | "reembolso". A regra de tipo é a mesma de apps/worker/src/revisao.js (tipoDeRevisao).
 
 const String mbCategoriaAClassificar = "A classificar";
 
@@ -152,7 +153,7 @@ class MbItemRevisao {
     if (j['tx_id'] is! String || j['valor'] is! num) return null;
     return MbItemRevisao(j['id'] as String, tipo,
         txId: j['tx_id'] as String,
-        data: '${j['data']}',
+        data: j['data'] is String ? j['data'] as String : null,
         descricao: '${j['descricao'] ?? ''}',
         destinatario: j['destinatario'] as String?,
         valor: (j['valor'] as num).toDouble());
@@ -181,22 +182,18 @@ List<MbItemRevisao> mbFilaVisivel(List<MbItemRevisao> itens, MbRevisoes revisoes
 /// Fila que a Início mostra, lida do que está no aparelho.
 final ValueNotifier<List<MbItemRevisao>> meuBancoRevisar = ValueNotifier(const []);
 
-Future<List<MbItemRevisao>> mbLerFilaRevisar() async {
-  final texto = await mbLerEstado('ciclo');
-  Object? ciclo;
-  try {
-    ciclo = texto == null ? null : jsonDecode(texto);
-  } catch (_) {}
-  final itens = mbItensRevisar(ciclo);
-  if (itens.isEmpty) return const [];
-  final espelho = await mbLerEspelho();
-  return mbFilaVisivel(itens, MbRevisoes.deRegistros([for (final e in espelho.values) e.registro]));
-}
-
 Future<void> mbAtualizarRevisar() async {
   try {
     await mbCriarTabelas();
-    meuBancoRevisar.value = await mbLerFilaRevisar();
+    final texto = await mbLerEstado('ciclo');
+    Object? ciclo;
+    try {
+      ciclo = texto == null ? null : jsonDecode(texto);
+    } catch (_) {}
+    final espelho = await mbLerEspelho(tabela: 'revisoes');
+    final revisoes = MbRevisoes.deRegistros([for (final e in espelho.values) e.registro]);
+    meuBancoRevisar.value = mbFilaVisivel(mbItensRevisar(ciclo), revisoes);
+    meuBancoEmprestimos.value = mbCalcularEmprestimos(revisoes.decisoes.values);
   } catch (e) {
     if (kDebugMode) debugPrint('Meu Banco: falha ao ler a fila Para revisar: $e');
   }
@@ -204,7 +201,7 @@ Future<void> mbAtualizarRevisar() async {
 
 /// Registros a gravar ao responder: a decisão da transação e, no Pix enviado com categoria, a memória do destinatário.
 List<Registro> mbRegistrosDeResposta(MbItemRevisao item, String resposta,
-    {String? categoriaPk, required String agora}) {
+    {String? categoriaPk, String? reembolsoDe, required String agora}) {
   final descricao = item.descricao ?? '';
   return [
     Registro(
@@ -219,6 +216,8 @@ List<Registro> mbRegistrosDeResposta(MbItemRevisao item, String resposta,
           'descricao': descricao.length > 200 ? descricao.substring(0, 200) : descricao,
           if (categoriaPk != null) 'categoria_id': idDoPk(categoriaPk),
           if (item.destinatario != null) 'destinatario': item.destinatario,
+          // Reembolso: id (sem prefixo "mb:") do gasto que o usuário confirmou como reembolsado.
+          if (resposta == 'reembolso' && reembolsoDe != null) 'reembolso_de': reembolsoDe,
         },
         agora,
         null),
