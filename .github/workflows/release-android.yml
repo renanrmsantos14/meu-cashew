@@ -36,18 +36,21 @@ jobs:
         id: v
         run: |
           atual=$(grep -m1 '^version:' budget/pubspec.yaml | awk '{print $2}' | tr -d '\r')
-          if git rev-parse -q --verify "refs/tags/v${atual}" >/dev/null; then
-            base="${atual%%+*}"
-            v="${base%.*}.$(( ${base##*.} + 1 ))+$(( ${atual#*+} + 1 ))"
+          v="$atual"
+          # Pula tags já usadas (inclusive as que ficaram fora da main numa execução que falhou).
+          while git rev-parse -q --verify "refs/tags/v${v}" >/dev/null; do
+            base="${v%%+*}"
+            v="${base%.*}.$(( ${base##*.} + 1 ))+$(( ${v#*+} + 1 ))"
+          done
+          if [ "$v" != "$atual" ]; then
             sed -i "s/^version: .*/version: $v/" budget/pubspec.yaml
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -qam "Versão $v [skip ci]"
-          else
-            v="$atual"
           fi
           git tag "v$v"
-          git push origin HEAD:main "v$v"
+          # Atômico: a tag só sobe junto com a main, nunca sozinha.
+          git push --atomic origin HEAD:main "v$v"
           echo "versao=$v" >> "$GITHUB_OUTPUT"
 
   web:
