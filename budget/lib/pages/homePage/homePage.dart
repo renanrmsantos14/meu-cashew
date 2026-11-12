@@ -5,7 +5,6 @@ import 'package:budget/database/generatePreviewData.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/homePage/homePageHeatmap.dart';
-import 'package:budget/pages/homePage/inicioEditorial.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/pages/homePage/homePageLineGraph.dart';
 import 'package:budget/pages/homePage/homePageNetWorth.dart';
@@ -128,9 +127,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (meuBancoPareado.value) {
-      return ehDesktop(context) ? const PainelDesktop() : const InicioEditorial();
-    }
+    // Pareado: o desktop usa o painel; o celular fica com a Início original do Cashew.
+    if (meuBancoPareado.value && ehDesktop(context)) return const PainelDesktop();
     bool showUsername = appStateSettings["username"] != "";
     bool showGreeting = appStateSettings["enableGreetingMessage"] == true;
     Widget slidingSelector = GestureDetector(
