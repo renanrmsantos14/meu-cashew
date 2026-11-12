@@ -68,6 +68,9 @@ class LancLocal {
   final double valor;
   final DateTime data;
   final String? metaPk, dividaPk;
+  // Escolha de orçamentos (pks); null = padrão (Geral). `limparOrcamentos`: o servidor tem uma escolha antiga a apagar.
+  final Set<String>? orcamentoPks;
+  final bool limparOrcamentos;
   final DateTime? modificadoEm;
   const LancLocal({
     required this.pk,
@@ -79,6 +82,8 @@ class LancLocal {
     required this.data,
     this.metaPk,
     this.dividaPk,
+    this.orcamentoPks,
+    this.limparOrcamentos = false,
     this.modificadoEm,
   });
 }
@@ -125,7 +130,16 @@ Map<String, dynamic> projetarOrcamento(OrcLocal o) => {
       'valor': o.valor,
       'categoria_ids': (o.categoriaPks ?? <String>[]).map(idDoPk).toList()
         ..sort(),
+      // Todo orçamento segue o ciclo do salário; sem isso o Worker usaria o mês civil ("mensal").
+      'periodo': 'ciclo',
     };
+
+/// Campo `orcamento_ids` (ids com prefixo, ordenados); `null` apaga a escolha antiga do servidor; ausente = nada a dizer.
+Map<String, dynamic> _orcamentoIds(Set<String>? pks, bool limpar) => pks != null
+    ? {'orcamento_ids': (pks.map(idDoPk).toList()..sort())}
+    : limpar
+        ? {'orcamento_ids': null}
+        : const {};
 
 Map<String, dynamic> projetarObjetivo(ObjLocal o) => o.divida
     ? {
@@ -152,6 +166,7 @@ Map<String, dynamic> projetarLancamento(LancLocal l) {
     'nota': nota.isEmpty ? null : _cortar(nota),
     'meta_id': l.metaPk == null ? null : idDoPk(l.metaPk!),
     'divida_id': l.dividaPk == null ? null : idDoPk(l.dividaPk!),
+    ..._orcamentoIds(l.orcamentoPks, l.limparOrcamentos),
   };
 }
 
@@ -218,7 +233,13 @@ LancLocal lancamentoDeDados(String id, Map<String, dynamic> d,
       data: dataDeTexto(d['data'] as String),
       metaPk: _pkOuNulo(d['meta_id']),
       dividaPk: _pkOuNulo(d['divida_id']),
+      orcamentoPks: orcamentoPksDeDados(d),
     );
+
+/// `orcamento_ids` do registro como pks; `null` (campo ausente) = padrão.
+Set<String>? orcamentoPksDeDados(Map<String, dynamic> d) => d['orcamento_ids'] is List
+    ? {for (final c in d['orcamento_ids'] as List) pkDoId(c as String)}
+    : null;
 
 AssinLocal? assinaturaDeDados(String id, Map<String, dynamic> d,
         {required String categoriaPadrao}) =>
@@ -256,20 +277,22 @@ Projetado? projetarAjuste({
   required String nomeCategoria,
   required String? editadoEm,
   bool ajusteDeCategoriaVigente = false,
+  Set<String>? orcamentoPks,
+  bool limparOrcamentos = false,
 }) {
   final id = txPk.startsWith('mb:') ? txPk.substring(3) : txPk;
-  if (categoriaPkAplicada == null) return null;
-  if (!existeLocal) {
-    return Projetado('ajustes', id, {'gasto': 0}, editadoEm);
+  Map<String, dynamic>? dados;
+  if (categoriaPkAplicada != null) {
+    if (!existeLocal) {
+      return Projetado('ajustes', id, {'gasto': 0}, editadoEm);
+    }
+    // Voltar à categoria aplicada com um ajuste ainda vigente precisa sobrescrever o ajuste antigo.
+    if (categoriaPkAtual != null &&
+        (categoriaPkAtual != categoriaPkAplicada || ajusteDeCategoriaVigente)) {
+      dados = {'categoria_id': idDoPk(categoriaPkAtual), 'category': nomeCategoria};
+    }
   }
-  // Voltar à categoria aplicada com um ajuste ainda vigente precisa sobrescrever o ajuste antigo.
-  if (categoriaPkAtual != null &&
-      (categoriaPkAtual != categoriaPkAplicada || ajusteDeCategoriaVigente)) {
-    return Projetado(
-        'ajustes',
-        id,
-        {'categoria_id': idDoPk(categoriaPkAtual), 'category': nomeCategoria},
-        editadoEm);
-  }
-  return null;
+  final orcamentos = existeLocal ? _orcamentoIds(orcamentoPks, limparOrcamentos) : const {};
+  if (dados == null && orcamentos.isEmpty) return null;
+  return Projetado('ajustes', id, {...?dados, ...orcamentos}, editadoEm);
 }

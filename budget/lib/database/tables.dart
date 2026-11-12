@@ -24,6 +24,8 @@ import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:budget/pages/activityPage.dart';
 
 import 'package:flutter/material.dart' show RangeValues;
+import 'package:budget/struct/mbSync/armazem.dart' show mbDdlOrcamentoTx;
+import 'package:budget/struct/mbSync/orcamentos.dart' show mbPertenceAoOrcamento;
 part 'tables.g.dart';
 
 int schemaVersionGlobal = 46;
@@ -1168,6 +1170,7 @@ class FinanceDatabase extends _$FinanceDatabase {
         );
       },
       beforeOpen: (details) async {
+        await customStatement(mbDdlOrcamentoTx);
         // This code exists because migration 42to43 may have not run correctly...
         // See explanation in 41to42
         try {
@@ -4841,6 +4844,9 @@ class FinanceDatabase extends _$FinanceDatabase {
         await getAllTransactionsBelongingToExcludedBudget(budget.budgetPk);
     await clearExcludeTransactions(
         transactionsExcludedFromThisBudget, budget.budgetPk);
+    // Meu Banco: tira o orçamento das escolhas (senão a transação ficaria sem orçamento nenhum).
+    await customStatement(
+        'DELETE FROM mb_orcamento_tx WHERE orcamento_pk = ?', [budget.budgetPk]);
 
     if (appStateSettings["lineGraphDisplayType"] ==
             LineGraphDisplay.Budget.index &&
@@ -6104,7 +6110,8 @@ class FinanceDatabase extends _$FinanceDatabase {
             (tbl.categoryFk.equals("0").not())
         : Constant(true);
 
-    return memberIncluded &
+    return mbPertenceAoOrcamento(tbl, budget) &
+        memberIncluded &
         includeShared &
         includeAdded &
         includeIncome &

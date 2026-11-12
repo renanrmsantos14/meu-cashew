@@ -37,6 +37,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart' show mbCarregarCicloCache;
 
 // Requires hot restart when changed
 bool enableDevicePreview = false && kDebugMode;
@@ -66,6 +67,7 @@ void main() async {
     database = await constructDb('db');
     entireAppLoaded = false;
     await initializeSettings();
+    await mbCarregarCicloCache();
     await inicioIndependente;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       try {

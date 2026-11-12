@@ -14,6 +14,8 @@ import 'package:budget/pages/homePage/homeTransactions.dart';
 import 'package:budget/pages/homePage/homePageUsername.dart';
 import 'package:budget/pages/homePage/homePageBudgets.dart';
 import 'package:budget/pages/homePage/homePageEmprestimos.dart';
+import 'package:budget/pages/homePage/homePageFaturaPatrimonio.dart';
+import 'package:budget/pages/homePage/homePageOrcamentoPadrao.dart';
 import 'package:budget/pages/homePage/homePageParaRevisar.dart';
 import 'package:budget/pages/homePage/homePageUpcomingTransactions.dart';
 import 'package:budget/pages/homePage/homePageAllSpendingSummary.dart';
@@ -192,6 +194,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
       "budgets": isHomeScreenSectionEnabled(context, "showPinnedBudgets")
           ? HomePageBudgets()
           : null,
+      // Início do Meu Banco: orçamento padrão, fatura e patrimônio (as duas últimas somem sem dados).
+      "orcamentoPadrao": HomePageOrcamentoPadrao(),
+      "faturaCartao": HomePageFatura(),
+      "patrimonio": HomePagePatrimonio(),
       // Fila "Para revisar" (Meu Banco): só aparece pareado e com itens.
       "paraRevisar": HomePageParaRevisar(),
       "overdueUpcoming":

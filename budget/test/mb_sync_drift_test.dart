@@ -5,6 +5,7 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/pareamento.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/meuBancoSync.dart';
@@ -54,7 +55,8 @@ Future<void> _categoria(String pk, String nome, {bool receita = false}) =>
 
 // Categorias próprias criadas pelo sync (mb:cat:) também sobem ao servidor; os testes olham só o resto.
 Iterable<Registro> _semCatsMb(Iterable<Registro> l) =>
-    l.where((r) => !r.id.startsWith('cashew:mb:cat:'));
+    l.where((r) =>
+        !r.id.startsWith('cashew:mb:cat:') && r.id != 'cashew:mb:orc:geral');
 
 Future<List<Transaction>> _txs() => database.select(database.transactions).get();
 
@@ -137,7 +139,10 @@ void main() {
     cliente.servidor
         .add(Registro('orcamentos', 'cashew:b1', null, t, t));
     await sync();
-    expect(await database.select(database.budgets).get(), isEmpty);
+    expect(
+        (await database.select(database.budgets).get())
+            .where((b) => b.budgetPk != 'mb:orc:geral'),
+        isEmpty);
   });
 
   Map<String, dynamic> banco() => {
@@ -225,7 +230,8 @@ void main() {
             dateTimeModified: Value(DateTime.now().add(const Duration(seconds: 5)))));
     cliente.enviados.clear();
     await sync();
-    expect(cliente.enviados.where((r) => r.tabela == 'orcamentos'), isEmpty);
+    expect(_semCatsMb(cliente.enviados).where((r) => r.tabela == 'orcamentos'),
+        isEmpty);
     expect((await mbLerEspelho())['orcamentos/cashew:b1']!.registro.deletedAt,
         isNull);
   });
@@ -427,5 +433,122 @@ void main() {
     expect(await _txs(), isEmpty);
     expect(await mbLerAplicado(), isEmpty);
     expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+  });
+
+  group('orçamentos', () {
+    Future<void> orcamento(String pk) =>
+        database.into(database.budgets).insert(BudgetsCompanion.insert(
+            budgetPk: Value(pk),
+            name: pk,
+            amount: 500,
+            startDate: DateTime(2025, 1, 1),
+            endDate: DateTime(2025, 1, 31),
+            periodLength: 1,
+            order: 5,
+            budgetTransactionFilters: const Value(
+                [BudgetTransactionFilters.defaultBudgetTransactionFilters]),
+            dateTimeModified: Value(DateTime.now())));
+
+    Future<void> depois(String pk, Set<String>? escolha) =>
+        mbDefinirOrcamentosDaTransacao(pk, escolha,
+            agora: DateTime.now().add(const Duration(seconds: 5)));
+
+    test('o Geral é criado na sincronização com valor 0 e sobe ao servidor', () async {
+      await sync();
+      final g = await database.getBudgetInstance(mbOrcamentoGeralPk);
+      expect(g.name, 'Geral');
+      expect(g.amount, 0);
+      await sync();
+      final env = cliente.enviados.singleWhere((r) => r.id == 'cashew:mb:orc:geral');
+      expect(env.tabela, 'orcamentos');
+      expect(env.dados!['valor'], 0);
+      expect(env.dados!['periodo'], 'ciclo');
+    });
+
+    test('escolha em transação mb: sai em ajustes uma vez e não repete', () async {
+      cliente.extra = banco();
+      await sync();
+      await orcamento('b1');
+      await depois('mb:t1', {'b1', mbOrcamentoGeralPk});
+      cliente.enviados.clear();
+      await sync();
+      final aj = cliente.enviados.singleWhere((r) => r.tabela == 'ajustes');
+      expect(aj.id, 't1');
+      expect(aj.dados!['orcamento_ids'], ['cashew:b1', 'cashew:mb:orc:geral']);
+      expect(aj.dados!.containsKey('gasto'), false);
+      cliente.enviados.clear();
+      await sync();
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+    });
+
+    test('voltar ao Geral apaga a escolha no servidor', () async {
+      cliente.extra = banco();
+      await sync();
+      await orcamento('b1');
+      await depois('mb:t1', {'b1'});
+      await sync();
+      expect(await mbOrcamentosDaTransacao('mb:t1'), {'b1'});
+      await mbDefinirOrcamentosDaTransacao('mb:t1', {mbOrcamentoGeralPk},
+          agora: DateTime.now().add(const Duration(seconds: 10)));
+      cliente.enviados.clear();
+      await sync();
+      final aj = cliente.enviados.where((r) => r.tabela == 'ajustes');
+      expect(aj.every((r) => r.dados?.containsKey('orcamento_ids') != true), true);
+      expect(await mbOrcamentosDaTransacao('mb:t1'), isNull);
+      expect((await mbLerEspelho())['ajustes/t1']!.projecao?['orcamento_ids'], isNull);
+    });
+
+    test('transação mb: sem escolha não gera ajuste nem gasto 0', () async {
+      cliente.extra = banco();
+      await sync();
+      cliente.enviados.clear();
+      await sync();
+      await sync();
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+    });
+
+    test('ajuste vindo do servidor grava a escolha e não volta como mudança', () async {
+      cliente.extra = banco();
+      await sync();
+      await orcamento('b1');
+      cliente.servidor.add(Registro('ajustes', 't1',
+          {'orcamento_ids': ['cashew:b1']}, _futuro(), null));
+      cliente.enviados.clear();
+      await sync();
+      expect(await mbOrcamentosDaTransacao('mb:t1'), {'b1'});
+      cliente.enviados.clear();
+      await sync();
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+    });
+
+    test('lançamento manual: escolha sobe e a recebida de outro aparelho é aplicada', () async {
+      await _categoria('c1', 'Mercado');
+      await orcamento('b1');
+      await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+              transactionPk: const Value('m1'),
+              name: 'Feira',
+              amount: -20,
+              note: '',
+              categoryFk: 'c1',
+              walletFk: const Value('0'),
+              dateCreated: Value(DateTime(2025, 1, 10)),
+              dateTimeModified: Value(DateTime.now())));
+      await mbDefinirOrcamentosDaTransacao('m1', {'b1'});
+      await sync();
+      final l = cliente.enviados.singleWhere((r) => r.tabela == 'lancamentos');
+      expect(l.dados!['orcamento_ids'], ['cashew:b1']);
+      cliente.servidor.add(Registro(
+          'lancamentos',
+          'l9',
+          {'data': '2025-01-11', 'descricao': 'Cinema', 'valor': -40, 'orcamento_ids': ['cashew:b1']},
+          _futuro(),
+          null));
+      cliente.servidor.add(Registro('lancamentos', 'l8',
+          {'data': '2025-01-11', 'descricao': 'Padaria', 'valor': -10}, _futuro(), null));
+      await sync();
+      expect(await mbOrcamentosDaTransacao('l9'), {'b1'});
+      expect(await mbOrcamentosDaTransacao('l8'), isNull);
+    });
   });
 }

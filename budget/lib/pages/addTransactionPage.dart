@@ -2,6 +2,7 @@ import 'package:budget/database/generatePreviewData.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/addBudgetPage.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/pages/addCategoryPage.dart';
 import 'package:budget/pages/addObjectivePage.dart';
 import 'package:budget/pages/addWalletPage.dart';
@@ -151,6 +152,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   String? selectedObjectiveLoanPk;
   String? selectedBudgetPk;
   Budget? selectedBudget;
+  // Orçamentos do Meu Banco: transação nova já nasce no Geral; ao editar, vale o que está salvo.
+  Set<String> selectedOrcamentos = {mbOrcamentoGeralPk};
+  bool orcamentosCarregados = true;
   bool selectedPaid = true;
   bool selectedBudgetIsShared = false;
   String selectedWalletPk = appStateSettings["selectedWalletPk"];
@@ -559,6 +563,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       if (rowId != null) {
         final Transaction transactionJustAdded =
             await database.getTransactionFromRowId(rowId);
+        if (orcamentosCarregados) {
+          await mbDefinirOrcamentosDaTransacao(
+              transactionJustAdded.transactionPk, selectedOrcamentos);
+        }
         print("Transaction just added:");
         print(transactionJustAdded);
 
@@ -865,6 +873,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
   updateInitial() async {
     if (widget.transaction != null) {
+      orcamentosCarregados = false;
+      mbOrcamentosDaTransacao(widget.transaction!.transactionPk).then((escolha) {
+        if (!mounted) return;
+        setState(() {
+          selectedOrcamentos = escolha ?? {mbOrcamentoGeralPk};
+          orcamentosCarregados = true;
+        });
+      });
       TransactionCategory? getSelectedCategory =
           await database.getCategoryInstance(widget.transaction!.categoryFk);
 
@@ -1475,6 +1491,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                         ),
                       ),
                     ),
+              SelectOrcamentos(
+                selecionados: selectedOrcamentos,
+                aoMudar: (novo) => setState(() => selectedOrcamentos = novo),
+              ),
               SelectAddedBudget(
                 selectedBudgetPk: selectedBudgetPk,
                 setSelectedBudget: setSelectedBudgetPk,
@@ -3055,6 +3075,68 @@ Future<bool> addAssociatedTitles(
     }
   }
   return true;
+}
+
+/// Escolha dos orçamentos da transação (vários). Só o Geral = padrão; nenhum = fora de todos.
+class SelectOrcamentos extends StatefulWidget {
+  const SelectOrcamentos({required this.selecionados, required this.aoMudar, super.key});
+  final Set<String> selecionados;
+  final void Function(Set<String>) aoMudar;
+
+  @override
+  State<SelectOrcamentos> createState() => _SelectOrcamentosState();
+}
+
+class _SelectOrcamentosState extends State<SelectOrcamentos> {
+  // Criado uma vez: cada toque num chip refaz o pai e não deve abrir nova assinatura.
+  final Stream<List<Budget>> _orcamentos = mbWatchOrcamentosEscolhiveis();
+
+  @override
+  Widget build(BuildContext context) {
+    final selecionados = widget.selecionados;
+    final aoMudar = widget.aoMudar;
+    return StreamBuilder<List<Budget>>(
+      stream: _orcamentos,
+      builder: (context, snapshot) {
+        final itens = snapshot.data ?? const <Budget>[];
+        if (itens.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsetsDirectional.only(top: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 17, bottom: 2),
+                child: TextFont(
+                    text: "Orçamentos",
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    textColor: getColor(context, "textLight")),
+              ),
+              SelectChips(
+                wrapped: enableDoubleColumn(context),
+                items: itens,
+                getLabel: (Budget b) => b.name,
+                onSelected: (Budget b) {
+                  final novo = {...selecionados};
+                  if (!novo.remove(b.budgetPk)) novo.add(b.budgetPk);
+                  aoMudar(novo);
+                },
+                getSelected: (Budget b) => selecionados.contains(b.budgetPk),
+                getCustomBorderColor: (Budget? b) => dynamicPastel(
+                    context,
+                    lightenPastel(
+                        HexColor(b?.colour,
+                            defaultColor: Theme.of(context).colorScheme.primary),
+                        amount: 0.3),
+                    amount: 0.4),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class SelectAddedBudget extends StatefulWidget {

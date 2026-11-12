@@ -2,6 +2,7 @@ import 'package:budget/database/tables.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/detectar.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 
 String? mbEditadoEm(DateTime? d) => d == null || d.year < 2001 ? null : isoMs(d);
@@ -44,7 +45,9 @@ Projetado mbProjObjetivo(Objective o) {
       mbEditadoEm(o.dateTimeModified));
 }
 
-Projetado mbProjLancamento(Transaction t, String carteiraNome) => Projetado(
+Projetado mbProjLancamento(Transaction t, String carteiraNome,
+        {Set<String>? orcamentos, bool limparOrcamentos = false}) =>
+    Projetado(
     'lancamentos',
     idDoPk(t.transactionPk),
     projetarLancamento(LancLocal(
@@ -56,7 +59,9 @@ Projetado mbProjLancamento(Transaction t, String carteiraNome) => Projetado(
         carteiraNome: carteiraNome,
         data: t.dateCreated,
         metaPk: t.objectiveFk,
-        dividaPk: t.objectiveLoanFk)),
+        dividaPk: t.objectiveLoanFk,
+        orcamentoPks: orcamentos,
+        limparOrcamentos: limparOrcamentos)),
     mbEditadoEm(t.dateTimeModified));
 
 Projetado mbProjAssinatura(Transaction t) => Projetado(
@@ -103,7 +108,7 @@ Projetado mbReescreverIds(Projetado p, Set<String> semPrefixo) {
       e.key: switch (e.key) {
         'pai_id' || 'categoria_id' || 'meta_id' || 'divida_id' =>
           ref(e.value) ?? e.value,
-        'categoria_ids' when e.value is List => [
+        'categoria_ids' || 'orcamento_ids' when e.value is List => [
             for (final v in e.value as List) ref(v) ?? v
           ],
         _ => e.value,
@@ -154,6 +159,13 @@ Future<Map<String, Projetado>> mbProjetarLocal(
   }
   (await database.select(database.objectives).get()).forEach((o) => add(mbProjObjetivo(o)));
 
+  final escolhas = await mbTodasEscolhasDeOrcamento();
+  // O servidor ainda guarda uma escolha que o padrão apagou: manda `orcamento_ids: null`.
+  bool servidorTemEscolha(String tabela, String id) {
+    final r = espelho['$tabela/$id']?.registro;
+    return r != null && r.deletedAt == null && r.dados?['orcamento_ids'] != null;
+  }
+
   final txs = await database.select(database.transactions).get();
   final mbPresentes = <String, Transaction>{};
   for (final t in txs) {
@@ -162,7 +174,10 @@ Future<Map<String, Projetado>> mbProjetarLocal(
     } else if (t.type == TransactionSpecialType.subscription) {
       add(mbProjAssinatura(t));
     } else if (mbEhLancamentoManual(t)) {
-      add(mbProjLancamento(t, carteiras[t.walletFk] ?? ''));
+      add(mbProjLancamento(t, carteiras[t.walletFk] ?? '',
+          orcamentos: escolhas[t.transactionPk],
+          limparOrcamentos: escolhas[t.transactionPk] == null &&
+              servidorTemEscolha('lancamentos', mbIdLocal(t.transactionPk, semPrefixo))));
     } else {
       final id = mbIdLocal(t.transactionPk, semPrefixo);
       existentes?.addAll(['lancamentos/$id', 'assinaturas/$id']);
@@ -180,6 +195,9 @@ Future<Map<String, Projetado>> mbProjetarLocal(
         categoriaPkAplicada: aplicado[pk],
         existeLocal: t != null,
         nomeCategoria: catPorPk[t?.categoryFk]?.name ?? '',
+        orcamentoPks: escolhas[pk],
+        limparOrcamentos: escolhas[pk] == null &&
+            servidorTemEscolha('ajustes', pk.startsWith('mb:') ? pk.substring(3) : pk),
         editadoEm: t == null ? agora : mbEditadoEm(t.dateTimeModified)));
   }
   return out;

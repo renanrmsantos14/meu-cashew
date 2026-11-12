@@ -1,3 +1,4 @@
+import 'package:budget/struct/mbSync/orcamentos.dart' show mbCicloCache, mbPeriodoDoCiclo;
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:budget/database/tables.dart';
@@ -573,6 +574,13 @@ BudgetReoccurence mapRecurrence(String? recurrenceString) {
 
 //get the current period of a repetitive budget
 DateTimeRange getBudgetDate(Budget budget, DateTime currentDate) {
+  // Meu Banco: orçamento mensal segue o ciclo do salário (início e fim vêm do Worker).
+  if (mbCicloCache != null &&
+      budget.reoccurrence == BudgetReoccurence.monthly &&
+      budget.periodLength == 1 &&
+      budget.sharedKey == null) {
+    return mbPeriodoDoCiclo(mbCicloCache!, currentDate);
+  }
   budget = database.limitBudgetPeriod(budget);
   if (budget.reoccurrence == BudgetReoccurence.custom) {
     return DateTimeRange(start: budget.startDate, end: budget.endDate);
@@ -1204,23 +1212,8 @@ List<String> popularCurrencies = [
   'btc', // Bitcoin
 ];
 
-String getDevicesDefaultCurrencyCode() {
-  try {
-    String? currentCountryCode =
-        WidgetsBinding.instance.platformDispatcher.locale.countryCode;
-    // print(currentCountryCode);
-    for (String currencyKey in currenciesJSON.keys) {
-      if (currenciesJSON[currencyKey] != null &&
-          currenciesJSON[currencyKey]["CountryCode"] != null &&
-          currenciesJSON[currencyKey]["CountryCode"] == currentCountryCode) {
-        return currencyKey;
-      }
-    }
-  } catch (e) {
-    print("Error getting default currency " + e.toString());
-  }
-  return popularCurrencies[0];
-}
+// Meu Banco é só em reais: a moeda padrão não depende do país do aparelho (um navegador em en-US dava "$").
+String getDevicesDefaultCurrencyCode() => "brl";
 
 void copyToClipboard(String text,
     {bool showSnackbar = true, String? customSnackbarDescription}) async {
