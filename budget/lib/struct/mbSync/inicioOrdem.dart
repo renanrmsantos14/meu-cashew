@@ -69,6 +69,7 @@ bool mbMigrarOrdemInicio(Map<String, dynamic> ajustes) {
     for (final k in ["showWalletSwitcher", "showPinnedBudgets", "showSpendingGraph"]) {
       ajustes[k] = false;
     }
+    ajustes["showObjectives"] = true; // metas na Início do celular (já eram no desktop)
     mudou = true;
   }
   if (_igual(ajustes["homePageOrderFullScreen"], _ordemAnteriorTelaGrande)) {

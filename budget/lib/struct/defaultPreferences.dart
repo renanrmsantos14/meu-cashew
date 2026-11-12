@@ -53,7 +53,7 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     "showWalletListFullScreen": false,
     "showPinnedBudgets": false,
     "showPinnedBudgetsFullScreen": false,
-    "showObjectives": false,
+    "showObjectives": true,
     "showObjectivesFullScreen": true,
     "showAllSpendingSummary": false,
     "showAllSpendingSummaryFullScreen": false,

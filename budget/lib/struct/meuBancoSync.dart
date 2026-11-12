@@ -11,6 +11,7 @@ import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/mbSync/detectar.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/metas.dart';
 import 'package:budget/struct/mbSync/projetarLocal.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 import 'package:budget/struct/mbSync/revisao.dart';
@@ -216,6 +217,9 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
       'avisos': jsonEncode(json['avisos'] ?? const []),
       'config': jsonEncode(json['config'] ?? const {}),
       'sincronizado_em': '${json['sincronizado_em'] ?? ''}',
+      // Worker antigo não manda a série: fica a que já temos.
+      if (json['investimentos_mensal'] is List)
+        chaveSerieMensal: jsonEncode(json['investimentos_mensal']),
     };
     if (resultado.agora.isNotEmpty) estado['cursor'] = resultado.agora;
     estado[_chaveConversao] = '1';
@@ -223,6 +227,7 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     // Todos os orçamentos seguem o ciclo; o Geral nasce depois do pull (se o outro aparelho já o criou, ele veio).
     mbCicloCache = mbCicloDeJson(json['ciclo']);
     await mbGarantirOrcamentoGeral();
+    await mbGarantirReserva();
     // Resposta dada durante esta sincronização regrava a marca com outro valor e fica para a próxima.
     if (repuxar != null && await mbLerEstado(_chaveRepuxar) == repuxar) {
       await mbRemoverEstado(_chaveRepuxar);
@@ -347,7 +352,10 @@ Future<void> _aplicar(MbResultado r) async {
         .go();
     await database.fixOrderWallets();
   }
-  if (r.investimentos != null) await _aplicarInvestimentos(r.investimentos!);
+  if (r.investimentos != null) {
+    await _aplicarInvestimentos(r.investimentos!);
+    await mbReconciliarVinculos(); // aplicação nova entra na meta a que já pertence
+  }
   // Pendente importada que saiu de pendentes some (virou lançada com outro id ou foi cancelada).
   for (final conta in r.contas) {
     final daCarteira =

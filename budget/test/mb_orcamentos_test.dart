@@ -340,6 +340,7 @@ void main() {
       expect(mbMigrarOrdemInicio(antigo), true);
       expect(antigo['homePageOrder'], mbOrdemInicio);
       expect(antigo['showWalletSwitcher'], false);
+      expect(antigo['showObjectives'], true); // metas também na Início do celular
       expect(antigo['homePageOrderFullScreen'], ['transactionsList', 'wallets']); // personalizada
       expect(antigo['showWalletSwitcherFullScreen'], isNull);
       final de = Map<String, dynamic>.from(antigo);

@@ -3,6 +3,7 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/detectar.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/metas.dart';
 import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/projetarLocal.dart';
 import 'package:budget/struct/mbSync/registro.dart';
@@ -218,17 +219,28 @@ Future<Projetado?> _objetivo(
         objectivePk: Value(o.pk),
         type: Value(o.divida ? ObjectiveType.loan : ObjectiveType.goal),
         name: Value(o.nome),
-        amount: Value(o.valor),
-        income: Value(o.receita),
+        // Registro sem o valor (app antigo, painel) não zera o alvo que já existe aqui.
+        amount: Value(
+            (o.divida ? d['valor_total'] : d['valor_alvo']) is num || existente == null
+                ? o.valor
+                : existente.amount),
+        // Meta mantém o income local (poupança por padrão): o progresso das aplicações é positivo.
+        income: Value(o.divida ? o.receita : existente?.income ?? true),
         endDate: Value(o.prazo),
         order: Value(existente?.order ??
             await _contar(database.objectives)),
         walletFk: Value(existente?.walletFk ?? '0'),
         dateTimeModified: modificado,
       ));
-  return mbProjObjetivo((await (database.select(database.objectives)
-        ..where((x) => x.objectivePk.equals(o.pk)))
-      .getSingle()));
+  // Sem `aplicacao_ids` (registro de app antigo) os vínculos locais ficam como estão.
+  if (o.aplicacaoIds != null) {
+    await mbDefinirAplicacoesDaMeta(o.pk, o.aplicacaoIds!.map(mbPkAplicacao));
+  }
+  return mbProjObjetivo(
+      await (database.select(database.objectives)
+            ..where((x) => x.objectivePk.equals(o.pk)))
+          .getSingle(),
+      aplicacoes: (await mbAplicacoesPorMeta())[o.pk] ?? const []);
 }
 
 Future<String?> _primeiraCategoria(bool receita) async {
@@ -357,6 +369,8 @@ Future<void> _apagar(Registro r) async {
           .go();
     case 'metas':
     case 'dividas':
+      await database.customStatement(
+          'DELETE FROM mb_meta_aplicacao WHERE meta_pk = ?', [pk]);
       await (database.update(database.transactions)
             ..where((t) => t.objectiveFk.equals(pk)))
           .write(const TransactionsCompanion(objectiveFk: Value(null)));
