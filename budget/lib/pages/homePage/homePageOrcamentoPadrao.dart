@@ -7,6 +7,7 @@ import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/meuBancoSync.dart' show meuBancoPareado;
 import 'package:budget/pages/budgetPage.dart' show determineBudgetPolarity;
 import 'package:budget/widgets/openPopup.dart' show RoutesToPopAfterDelete;
+import 'package:budget/widgets/navigationSidebar.dart' show enableDoubleColumn;
 import 'package:budget/widgets/pieChart.dart';
 import 'package:budget/widgets/tappable.dart';
 import 'package:budget/widgets/textWidgets.dart';
@@ -139,17 +140,7 @@ class _Cartao extends StatelessWidget {
                 ],
                 if (dados.any((c) => c.total != 0)) ...[
                   const SizedBox(height: 12),
-                  SizedBox(
-                    height: 190,
-                    child: PieChartWrapper(
-                      disableLarge: true,
-                      pieChartDisplayStateKey: null,
-                      data: dados,
-                      totalSpent: gasto,
-                      setSelectedCategory: (_, __) {},
-                      middleColor: getColor(context, "lightDarkAccentHeavyLight"),
-                    ),
-                  ),
+                  _pizzaELegenda(context, dados, gasto, determineBudgetPolarity(budget)),
                 ],
               ],
             ),
@@ -158,4 +149,51 @@ class _Cartao extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _pizzaELegenda(
+    BuildContext context, List<CategoryWithTotal> dados, double gasto, num polaridade) {
+  final pizza = SizedBox(
+    height: 190,
+    child: PieChartWrapper(
+      disableLarge: true,
+      pieChartDisplayStateKey: null,
+      data: dados,
+      totalSpent: gasto,
+      setSelectedCategory: (_, __) {},
+      middleColor: getColor(context, "lightDarkAccentHeavyLight"),
+    ),
+  );
+  // Celular: só a pizza (compacto). Computador: legenda por categoria ao lado, senão sobra espaço vazio.
+  if (!enableDoubleColumn(context)) return pizza;
+  final itens = [for (final c in dados) if (c.total != 0) c]
+    ..sort((a, b) => b.total.abs().compareTo(a.total.abs()));
+  return Row(children: [
+    SizedBox(width: 260, child: pizza),
+    const SizedBox(width: 24),
+    Expanded(
+      child: Column(children: [
+        for (final c in itens)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                    color: HexColor(c.category.colour,
+                        defaultColor: Theme.of(context).colorScheme.primary),
+                    shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: TextFont(text: c.category.name, fontSize: 14)),
+              TextFont(
+                  text: brl(c.total * polaridade),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold),
+            ]),
+          ),
+      ]),
+    ),
+  ]);
 }

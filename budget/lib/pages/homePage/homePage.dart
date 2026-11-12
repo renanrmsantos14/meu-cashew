@@ -410,7 +410,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       }),
                     SizedBox(
                       height: enableDoubleColumn(context) == true
-                          ? 40
+                          ? 90 // respiro para o FAB "+" não cobrir o fim do conteúdo
                           : areAllDisabledAfterTransactionsList(
                                   homePageSections)
                               ? 25

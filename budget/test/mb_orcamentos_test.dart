@@ -323,7 +323,9 @@ void main() {
       const esperado = ['orcamentoPadrao', 'paraRevisar', 'faturaCartao', 'patrimonio', 'objectives', 'emprestimos'];
       expect(mbOrdemInicio.take(6), esperado);
       expect(mbOrdemInicio.last, 'transactionsList');
-      expect(mbOrdemInicioTelaGrande.take(4), esperado.take(4));
+      expect(mbOrdemInicioTelaGrande.take(6),
+          ['ORDER:LEFT', 'orcamentoPadrao', 'paraRevisar', 'faturaCartao', 'patrimonio', 'ORDER:RIGHT']);
+      expect(mbOrdemInicioTelaGrande.sublist(6, 8), ['objectives', 'emprestimos']);
       expect(mbOrdemInicioTelaGrande.last, 'transactionsList');
       expect(mbOrdemInicioTelaGrande.where((e) => e.startsWith('ORDER:')), ['ORDER:LEFT', 'ORDER:RIGHT']);
       expect({...mbOrdemInicio}.length, mbOrdemInicio.length);

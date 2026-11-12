@@ -28,16 +28,18 @@ const List<String> mbOrdemInicio = [
   "transactionsList",
 ];
 
+// Duas colunas no computador. Esquerda: o que se olha primeiro e sempre cabe (orçamento padrão, fila, fatura,
+// patrimônio). Direita: o que cresce com o uso (metas, empréstimos, lista de transações), como a Início do Cashew.
 const List<String> mbOrdemInicioTelaGrande = [
+  "ORDER:LEFT",
   "orcamentoPadrao",
   "paraRevisar",
   "faturaCartao",
   "patrimonio",
-  "ORDER:LEFT",
+  "ORDER:RIGHT",
   "objectives",
   "emprestimos",
   ..._ocultas,
-  "ORDER:RIGHT",
   "transactionsList",
 ];
 
