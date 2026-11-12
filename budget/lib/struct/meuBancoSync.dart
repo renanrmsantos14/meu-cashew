@@ -173,8 +173,10 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     };
     final ctx = MbContextoCategoria.deRegistros(
         [for (final e in espelho.values) e.registro]);
+    final historico = await _comprasLocais();
     final resultado = mbMapearPull(json, ctx,
-        compras: await _comprasLocais(),
+        compras: historico.compras,
+        abatimentos: historico.abatimentos,
         pkCategoria: (id, nome, receita) =>
             id != null && locais.contains(pkDoId(id))
                 ? pkDoId(id)
@@ -336,15 +338,26 @@ Future<void> _aplicar(MbResultado r) async {
       removidos);
 }
 
-// Despesas `mb:` já no app: um estorno novo pode abater uma compra de um pull anterior.
-Future<List<MbCompra>> _comprasLocais() async => [
-      for (final t in await (database.select(database.transactions)
-            ..where((t) =>
-                t.transactionPk.like('mb:%') & t.amount.isSmallerThanValue(0)))
-          .get())
-        MbCompra(t.transactionPk, mbNormalizarEstabelecimento(t.name),
-            (-t.amount * 100).round(), t.dateCreated, '', t.categoryFk)
-    ];
+// Despesas `mb:` já no app: um estorno novo pode abater uma compra de um pull anterior (valor negativo),
+// e os abatimentos já aplicados (valor positivo) indicam quais compras já foram abatidas.
+Future<({List<MbCompra> compras, List<MbCompra> abatimentos})>
+    _comprasLocais() async {
+  final compras = <MbCompra>[], abatimentos = <MbCompra>[];
+  final linhas = await (database.select(database.transactions)
+        ..where((t) =>
+            t.transactionPk.like('mb:%') & t.income.equals(false)))
+      .get();
+  for (final t in linhas) {
+    final c = MbCompra(t.transactionPk, mbNormalizarEstabelecimento(t.name),
+        (t.amount.abs() * 100).round(), t.dateCreated, '', t.categoryFk);
+    if (t.amount < 0) {
+      compras.add(c);
+    } else if (t.amount > 0) {
+      abatimentos.add(c);
+    }
+  }
+  return (compras: compras, abatimentos: abatimentos);
+}
 
 // Cada investimento vira um ajuste de saldo (categoria "0", fora de gastos e receitas) na carteira "Investimentos",
 // com o saldo atual. A data do primeiro import é mantida para não aparecer como lançamento novo a cada sync.

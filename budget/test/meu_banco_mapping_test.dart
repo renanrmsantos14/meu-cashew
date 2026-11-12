@@ -262,6 +262,35 @@ void main() {
       expect(e.categoriaPk, "mb:cat:d:Saúde");
     });
 
+    test("estorno de pull anterior já consumiu a compra: o próximo não abate a mesma", () {
+      final compra = MbCompra("mb:c", mbNormalizarEstabelecimento("Loja"), 1000,
+          DateTime(2026, 10, 5, 12), "", "mb:cat:d:Lazer");
+      final anterior = MbCompra("mb:e1", mbNormalizarEstabelecimento("Loja"), 1000,
+          DateTime(2026, 10, 10, 12), "", "mb:cat:d:Lazer");
+      final r = mapa([tx("e2", "Loja", -10, conta: "cart", data: "2026-10-11")],
+          compras: [compra]);
+      expect(r.transacoes.single.receita, false);
+      final r2 = mbMapearPull({
+        "contas": [{"id": "cart", "type": "CREDIT", "name": "Cartão", "bank": "Inter"}],
+        "transacoes": [tx("e2", "Loja", -10, conta: "cart", data: "2026-10-11")],
+      }, _ctx0,
+          compras: [compra],
+          abatimentos: [anterior],
+          pkCategoria: (_, n, rc) => mbPkCategoria(n, rc));
+      expect(r2.transacoes.single.receita, true);
+    });
+
+    test("estornos iguais são pareados em ordem cronológica, mesmo vindo fora de ordem", () {
+      final r = mapa([
+        tx("e2", "Loja", -10, conta: "cart", data: "2026-10-12"),
+        tx("e1", "Loja", -10, conta: "cart", data: "2026-10-09"),
+        tx("c1", "Loja", 10, conta: "cart", data: "2026-10-01", cat: "Gaming"),
+        tx("c2", "Loja", 10, conta: "cart", data: "2026-10-08", cat: "Groceries"),
+      ]);
+      String cat(String id) => r.transacoes.firstWhere((t) => t.pk == "mb:$id").categoriaNome;
+      expect([cat("e1"), cat("e2")], ["Mercado", "Lazer"]);
+    });
+
     test("ajuste do usuário no estorno prevalece", () {
       final ctx = MbContextoCategoria({"e": {"category": "Salary"}}, [], {}, {});
       final r = mbMapearPull({

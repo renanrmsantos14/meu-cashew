@@ -373,7 +373,8 @@ Map<String, dynamic> _mapa(Object? v) =>
 MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     {required String Function(String? catId, String nomeTraduzido, bool receita)
         pkCategoria,
-    List<MbCompra> compras = const []}) {
+    List<MbCompra> compras = const [],
+    List<MbCompra> abatimentos = const []}) {
   final contas = <MbConta>[];
   final brutas = <Map<String, dynamic>>[];
   final cartoes = <String, bool>{};
@@ -460,7 +461,7 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
             pkCategoria(null, mbCategoriaCashback, false))
         : tx);
   }
-  _abaterEstornos(transacoes, estornos, compras);
+  _abaterEstornos(transacoes, estornos, compras, abatimentos);
   final pendentes = <String>{
     for (final id in (json["pendentes"] as List? ?? const []))
       mbPkTransacao(id.toString())
@@ -498,34 +499,54 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
 }
 
 // Estorno (mesmo valor e estabelecimento de uma compra nos 60 dias anteriores) abate o gasto: vira valor
-// positivo na categoria da compra, em vez de renda. `locais` são compras de pulls anteriores.
-void _abaterEstornos(
-    List<MbTransacao> transacoes, Set<String> estornos, List<MbCompra> locais) {
+// positivo na categoria da compra, em vez de renda. `locais` são compras de pulls anteriores e
+// `abatimentosLocais` os estornos já aplicados em pulls anteriores, que já consumiram a compra deles.
+void _abaterEstornos(List<MbTransacao> transacoes, Set<String> estornos,
+    List<MbCompra> locais, List<MbCompra> abatimentosLocais) {
+  if (estornos.isEmpty) return;
   final pks = {for (final t in transacoes) t.pk};
-  final compras = <MbCompra>[
-    for (final t in transacoes)
-      if (t.valor < 0)
-        MbCompra(t.pk, mbNormalizarEstabelecimento(t.nome),
-            (-t.valor * 100).round(), t.data, t.categoriaNome, t.categoriaPk),
-    for (final c in locais)
-      if (!pks.contains(c.pk)) c,
-  ];
+  final compras = <int, List<MbCompra>>{};
+  void add(MbCompra c) => (compras[c.centavos] ??= []).add(c);
+  for (final t in transacoes) {
+    if (t.valor < 0) {
+      add(MbCompra(t.pk, mbNormalizarEstabelecimento(t.nome),
+          (-t.valor * 100).round(), t.data, t.categoriaNome, t.categoriaPk));
+    }
+  }
+  locais.where((c) => !pks.contains(c.pk)).forEach(add);
+
   final usadas = <String>{};
-  for (var i = 0; i < transacoes.length; i++) {
-    final t = transacoes[i];
-    if (!estornos.contains(t.pk)) continue;
-    final nome = mbNormalizarEstabelecimento(t.nome);
-    final centavos = (t.valor * 100).round();
+  MbCompra? alvoDe(DateTime data, String nome, int centavos) {
     MbCompra? alvo;
-    for (final c in compras) {
-      final dias = t.data.difference(c.data).inDays;
-      if (c.centavos != centavos ||
-          c.estabelecimento != nome ||
+    for (final c in compras[centavos] ?? const <MbCompra>[]) {
+      final dias = data.difference(c.data).inDays;
+      if (c.estabelecimento != nome ||
           dias < 0 ||
           dias > mbJanelaEstornoDias ||
           usadas.contains(c.pk)) continue;
       if (alvo == null || c.data.isAfter(alvo.data)) alvo = c;
     }
+    return alvo;
+  }
+
+  final antigos = abatimentosLocais.where((a) => !pks.contains(a.pk)).toList()
+    ..sort((a, b) => a.data.compareTo(b.data));
+  for (final a in antigos) {
+    final alvo = alvoDe(a.data, a.estabelecimento, a.centavos);
+    if (alvo != null) usadas.add(alvo.pk);
+  }
+  // Em ordem cronológica, para o estorno mais antigo ficar com a compra mais antiga.
+  final ordem = [
+    for (var i = 0; i < transacoes.length; i++)
+      if (estornos.contains(transacoes[i].pk)) i
+  ]..sort((a, b) {
+      final c = transacoes[a].data.compareTo(transacoes[b].data);
+      return c != 0 ? c : a.compareTo(b);
+    });
+  for (final i in ordem) {
+    final t = transacoes[i];
+    final alvo = alvoDe(
+        t.data, mbNormalizarEstabelecimento(t.nome), (t.valor * 100).round());
     if (alvo == null) continue;
     usadas.add(alvo.pk);
     transacoes[i] = t.abatendo(alvo.categoriaNome, alvo.categoriaPk);
