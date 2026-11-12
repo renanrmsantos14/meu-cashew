@@ -9,8 +9,13 @@ import 'package:drift/drift.dart';
 const String mbDdlOrcamentoTx = 'CREATE TABLE IF NOT EXISTS mb_orcamento_tx ('
     'tx_pk TEXT NOT NULL, orcamento_pk TEXT NOT NULL, PRIMARY KEY (tx_pk, orcamento_pk))';
 
+/// Aplicação (investimento) -> meta. A chave na aplicação garante "uma aplicação em uma meta só".
+const String mbDdlMetaAplicacao = 'CREATE TABLE IF NOT EXISTS mb_meta_aplicacao ('
+    'aplicacao_pk TEXT PRIMARY KEY, meta_pk TEXT NOT NULL)';
+
 Future<void> mbCriarTabelas() async {
   await database.customStatement(mbDdlOrcamentoTx);
+  await database.customStatement(mbDdlMetaAplicacao);
   await database.customStatement(
       'CREATE TABLE IF NOT EXISTS mb_registros ('
       'tabela TEXT NOT NULL, id TEXT NOT NULL, dados TEXT, updated_at TEXT NOT NULL, '

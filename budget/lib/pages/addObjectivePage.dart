@@ -8,6 +8,8 @@ import 'package:budget/pages/premiumPage.dart';
 import 'package:budget/pages/settingsPage.dart';
 import 'package:budget/struct/currencyFunctions.dart';
 import 'package:budget/struct/databaseGlobal.dart';
+import 'package:budget/struct/mbSync/metas.dart';
+import 'package:budget/widgets/mbAplicacoesDaMeta.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/animatedExpanded.dart';
 import 'package:budget/widgets/button.dart';
@@ -237,6 +239,11 @@ class _AddObjectivePageState extends State<AddObjectivePage>
     print("Added objective");
     int rowId = await database.createOrUpdateObjective(
         insert: widget.objective == null, await createObjective());
+    if (objectiveType == ObjectiveType.goal && selectedAplicacoes != null) {
+      final pk = widget.objective?.objectivePk ??
+          (await database.getObjectiveFromRowId(rowId)).objectivePk;
+      await mbDefinirAplicacoesDaMeta(pk, selectedAplicacoes!);
+    }
 
     // Create the initial transaction if it is a loan
     if (widget.objective == null &&
@@ -307,6 +314,8 @@ class _AddObjectivePageState extends State<AddObjectivePage>
   }
 
   Objective? objectiveInitial;
+  // Aplicações escolhidas para a meta (pks `mb:inv:*`); null = ainda não carregadas, não mexe nos vínculos.
+  Set<String>? selectedAplicacoes;
 
   void showDiscardChangesPopupIfNotEditing() async {
     Objective objectiveCreated = await createObjective();
@@ -339,6 +348,15 @@ class _AddObjectivePageState extends State<AddObjectivePage>
       selectedPin = widget.objective!.pinned;
       selectedWalletPk = widget.objective!.walletFk;
       isDifferenceOnlyLoan = getIsDifferenceOnlyLoan(widget.objective!);
+      if (objectiveType == ObjectiveType.goal) {
+        mbVinculosMetas().then((v) {
+          if (!mounted) return;
+          setState(() => selectedAplicacoes = {
+                for (final e in v.entries)
+                  if (e.value == widget.objective!.objectivePk) e.key
+              });
+        });
+      }
 
       selectedIncome = widget.objective!.income;
       if (widget.objective?.income == false) {
@@ -923,6 +941,15 @@ class _AddObjectivePageState extends State<AddObjectivePage>
                     ),
                   ),
                 ),
+              ),
+            ),
+
+          if (objectiveType == ObjectiveType.goal && (widget.objective == null || selectedAplicacoes != null))
+            SliverToBoxAdapter(
+              child: MbAplicacoesDaMeta(
+                metaPk: widget.objective?.objectivePk,
+                selecionadas: selectedAplicacoes ?? const {},
+                onChanged: (v) => setState(() => selectedAplicacoes = v),
               ),
             ),
 

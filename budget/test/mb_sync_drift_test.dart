@@ -5,6 +5,7 @@ import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/cliente.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/metas.dart';
 import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/pareamento.dart';
 import 'package:budget/struct/mbSync/registro.dart';
@@ -56,7 +57,9 @@ Future<void> _categoria(String pk, String nome, {bool receita = false}) =>
 // Categorias próprias criadas pelo sync (mb:cat:) também sobem ao servidor; os testes olham só o resto.
 Iterable<Registro> _semCatsMb(Iterable<Registro> l) =>
     l.where((r) =>
-        !r.id.startsWith('cashew:mb:cat:') && r.id != 'cashew:mb:orc:geral');
+        !r.id.startsWith('cashew:mb:cat:') &&
+        r.id != 'cashew:mb:orc:geral' &&
+        r.id != 'cashew:mb:meta:reserva');
 
 Future<List<Transaction>> _txs() => database.select(database.transactions).get();
 
@@ -290,10 +293,176 @@ void main() {
     await sync();
     expect((await _txs()).map((x) => x.transactionPk).toSet(), {'l1', 's1'});
     expect((await _txs()).firstWhere((x) => x.transactionPk == 'l1').objectiveFk, 'm1');
-    expect(await database.select(database.objectives).get(), hasLength(2));
+    // Meta, dívida e a Reserva de emergência criada no primeiro sync.
+    expect(await database.select(database.objectives).get(), hasLength(3));
     cliente.enviados.clear();
     await sync();
     expect(_semCatsMb(cliente.enviados), isEmpty);
+  });
+
+  group('metas ligadas a aplicações', () {
+    Map<String, dynamic> inv(Map<String, double> saldos) => {
+          'investimentos': [
+            for (final e in saldos.entries)
+              {'id': e.key, 'nome': 'Aplicação ${e.key}', 'saldo': e.value, 'banco': 'Inter'}
+          ]
+        };
+
+    Future<double> progresso(String metaPk) async => (await database
+            .customSelect(
+                'SELECT COALESCE(SUM(amount), 0) AS s FROM transactions '
+                'WHERE objective_fk = ? AND paid = 1',
+                variables: [Variable<String>(metaPk)])
+            .getSingle())
+        .read<double>('s');
+
+    Iterable<Registro> metasEnviadas() => cliente.enviados.where((r) => r.tabela == 'metas');
+
+    test('Reserva de emergência é criada uma vez, sem valor alvo, e vai ao servidor', () async {
+      await sync();
+      await sync();
+      final metas = await database.select(database.objectives).get();
+      expect(metas.map((o) => [o.objectivePk, o.name, o.amount, o.endDate, o.pinned]), [
+        ['mb:meta:reserva', 'Reserva de emergência', 0.0, null, true]
+      ]);
+      expect(metas.single.income, isTrue);
+      final enviadas = metasEnviadas().toList();
+      expect(enviadas, hasLength(1));
+      expect(enviadas.single.id, 'cashew:mb:meta:reserva');
+      expect(enviadas.single.dados, {'nome': 'Reserva de emergência', 'valor_alvo': 0.0, 'aplicacao_ids': <String>[]});
+    });
+
+    test('Reserva já existente no servidor não é recriada; apagada, não volta', () async {
+      cliente.servidor.add(Registro('metas', 'cashew:mb:meta:reserva',
+          {'nome': 'Reserva de emergência', 'valor_alvo': 30000, 'aplicacao_ids': ['i1']},
+          DateTime.now().subtract(const Duration(days: 1)).toUtc().toIso8601String(), null));
+      cliente.extra = inv({'i1': 100});
+      await sync();
+      final o = (await database.select(database.objectives).get()).single;
+      expect([o.name, o.amount], ['Reserva de emergência', 30000.0]);
+      expect(metasEnviadas(), isEmpty);
+
+      await (database.delete(database.objectives)).go();
+      await sync();
+      expect(await database.select(database.objectives).get(), isEmpty);
+    });
+
+    test('aplicações da meta somam o progresso e não geram ajuste', () async {
+      cliente.servidor.add(Registro('metas', 'cashew:m1',
+          {'nome': 'Viagem', 'valor_alvo': 5000, 'aplicacao_ids': ['i1', 'i2']},
+          DateTime.now().subtract(const Duration(days: 1)).toUtc().toIso8601String(), null));
+      cliente.extra = inv({'i1': 1500.5, 'i2': 200, 'i3': 900});
+      await sync();
+      expect(await progresso('m1'), 1700.5);
+      final porPk = {for (final t in await _txs()) t.transactionPk: t.objectiveFk};
+      expect(porPk['mb:inv:i3'], isNull);
+      // Meta de poupança (income): o tile do Cashew mostra o progresso positivo.
+      expect((await (database.select(database.objectives)..where((o) => o.objectivePk.equals('m1'))).getSingle()).income, isTrue);
+      expect(await mbLerAplicado(), isEmpty);
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+
+      // Saldo muda no sync seguinte: o progresso acompanha.
+      cliente.extra = inv({'i1': 1600, 'i2': 200, 'i3': 900});
+      await sync();
+      expect(await progresso('m1'), 1800.0);
+      expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
+    });
+
+    test('vínculo chega antes da aplicação e vale quando ela aparece', () async {
+      cliente.servidor.add(Registro('metas', 'cashew:m1',
+          {'nome': 'Casa', 'valor_alvo': 10000, 'aplicacao_ids': ['i9']},
+          DateTime.now().subtract(const Duration(days: 1)).toUtc().toIso8601String(), null));
+      await sync();
+      expect(await progresso('m1'), 0);
+      cliente.extra = inv({'i9': 777});
+      await sync();
+      expect(await progresso('m1'), 777);
+    });
+
+    test('cada aplicação fica em uma meta só', () async {
+      cliente.extra = inv({'i1': 100, 'i2': 50});
+      await sync();
+      for (final pk in ['m1', 'm2']) {
+        await database.into(database.objectives).insert(ObjectivesCompanion.insert(
+            objectivePk: Value(pk), name: pk, amount: 1000, order: 5,
+            dateTimeModified: Value(DateTime.now())));
+      }
+      await mbDefinirAplicacoesDaMeta('m1', ['mb:inv:i1']);
+      await mbDefinirAplicacoesDaMeta('m2', ['mb:inv:i1', 'mb:inv:i2']);
+      expect(await mbVinculosMetas(), {'mb:inv:i1': 'm2', 'mb:inv:i2': 'm2'});
+      expect(await progresso('m1'), 0);
+      expect(await progresso('m2'), 150);
+      final lista = await mbAplicacoes();
+      expect({for (final a in lista) a.id: a.metaPk}, {'i1': 'm2', 'i2': 'm2'});
+      await mbDefinirAplicacoesDaMeta('m2', ['mb:inv:i2']);
+      expect(await progresso('m2'), 50);
+      expect((await _txs()).singleWhere((t) => t.transactionPk == 'mb:inv:i1').objectiveFk, isNull);
+    });
+
+    test('vínculo escolhido no app sobe ordenado e não volta como mudança', () async {
+      cliente.extra = inv({'i1': 100, 'i2': 50});
+      await sync();
+      await database.into(database.objectives).insert(ObjectivesCompanion.insert(
+          objectivePk: const Value('m1'), name: 'Viagem', amount: 2000, order: 5,
+          endDate: Value(DateTime(2027, 1, 31, 12)),
+          dateTimeModified: Value(DateTime.now())));
+      await mbDefinirAplicacoesDaMeta('m1', ['mb:inv:i2', 'mb:inv:i1']);
+      cliente.enviados.clear();
+      await sync();
+      expect(metasEnviadas().singleWhere((r) => r.id == 'cashew:m1').dados,
+          {'nome': 'Viagem', 'valor_alvo': 2000.0, 'prazo': '2027-01-31', 'aplicacao_ids': ['i1', 'i2']});
+      cliente.enviados.clear();
+      await sync();
+      expect(_semCatsMb(cliente.enviados), isEmpty);
+    });
+
+    test('meta de app antigo (sem aplicacao_ids, sem valor) não apaga vínculos nem o alvo locais', () async {
+      cliente.extra = inv({'i1': 100});
+      await sync();
+      await database.into(database.objectives).insert(ObjectivesCompanion.insert(
+          objectivePk: const Value('m1'), name: 'Viagem', amount: 2000, order: 5,
+          dateTimeModified: Value(DateTime.now())));
+      await mbDefinirAplicacoesDaMeta('m1', ['mb:inv:i1']);
+      cliente.servidor.add(Registro('metas', 'cashew:m1', {'nome': 'Viagem 2'}, _futuro(), null));
+      await sync();
+      final o = await (database.select(database.objectives)..where((x) => x.objectivePk.equals('m1'))).getSingle();
+      expect([o.name, o.amount, o.endDate, o.income], ['Viagem 2', 2000.0, null, isTrue]);
+      expect(await mbVinculosMetas(), {'mb:inv:i1': 'm1'});
+      expect(await progresso('m1'), 100);
+    });
+
+    test('meta apagada no servidor solta as aplicações', () async {
+      cliente.extra = inv({'i1': 100});
+      cliente.servidor.add(Registro('metas', 'cashew:m1',
+          {'nome': 'Viagem', 'valor_alvo': 100, 'aplicacao_ids': ['i1']},
+          DateTime.now().subtract(const Duration(days: 1)).toUtc().toIso8601String(), null));
+      await sync();
+      expect(await progresso('m1'), 100);
+      final t = _futuro();
+      cliente.servidor
+        ..clear()
+        ..add(Registro('metas', 'cashew:m1', null, t, t));
+      await sync();
+      expect(await mbVinculosMetas(), isEmpty);
+      expect((await _txs()).singleWhere((x) => x.transactionPk == 'mb:inv:i1').objectiveFk, isNull);
+    });
+
+    test('série mensal do Worker é guardada; Worker antigo não apaga a série', () async {
+      final serie = [
+        {'mes': '2026-11', 'itens': [{'id': 'i1', 'nome': 'CDB', 'banco': 'Inter', 'saldo': 1700.5}]},
+        {'mes': '2026-10', 'itens': [{'id': 'i1', 'nome': 'CDB', 'banco': 'Inter', 'saldo': 1500}, {'id': 'i2', 'nome': 'Fundo', 'saldo': 200}]},
+      ];
+      cliente.extra = {...inv({'i1': 1700.5}), 'investimentos_mensal': serie};
+      await sync();
+      var lida = await mbLerSerieMensal();
+      expect(lida.map((m) => m.mes), ['2026-10', '2026-11']);
+      expect(lida.map((m) => m.total), [1700.0, 1700.5]);
+      cliente.extra = inv({'i1': 1700.5});
+      await sync();
+      lida = await mbLerSerieMensal();
+      expect(lida, hasLength(2));
+      expect(mbSerieDeJson('lixo'), isEmpty);
+    });
   });
 
   test('trocar de conta apaga o espelho e o importado, e reenvia o que é do Cashew', () async {

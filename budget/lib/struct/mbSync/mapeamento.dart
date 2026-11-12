@@ -52,6 +52,8 @@ class ObjLocal {
   final bool divida, receita;
   final double valor;
   final DateTime? prazo, modificadoEm;
+  /// Ids das aplicações da meta (sem prefixo); null = não informado (dívida).
+  final List<String>? aplicacaoIds;
   const ObjLocal({
     required this.pk,
     required this.nome,
@@ -60,6 +62,7 @@ class ObjLocal {
     required this.valor,
     this.prazo,
     this.modificadoEm,
+    this.aplicacaoIds,
   });
 }
 
@@ -150,8 +153,10 @@ Map<String, dynamic> projetarObjetivo(ObjLocal o) => o.divida
       }
     : {
         'nome': _cortar(o.nome),
+        // valor_alvo 0 = meta sem valor definido ("Definir valor").
         'valor_alvo': o.valor,
         'prazo': o.prazo == null ? null : dataLocal(o.prazo!),
+        'aplicacao_ids': [...?o.aplicacaoIds]..sort(),
       };
 
 Map<String, dynamic> projetarLancamento(LancLocal l) {
@@ -216,8 +221,11 @@ ObjLocal objetivoDeDados(String id, Map<String, dynamic> d,
     nome: d['nome'] as String,
     divida: divida,
     receita: divida && d['sentido'] == 'me_devem',
-    valor: ((divida ? d['valor_total'] : d['valor_alvo']) as num).toDouble(),
+    valor: (((divida ? d['valor_total'] : d['valor_alvo']) as num?) ?? 0).toDouble(),
     prazo: divida || prazo == null ? null : dataDeTexto(prazo),
+    aplicacaoIds: !divida && d['aplicacao_ids'] is List
+        ? [for (final a in d['aplicacao_ids'] as List) '$a']
+        : null,
   );
 }
 

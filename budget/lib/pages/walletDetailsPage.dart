@@ -1,3 +1,5 @@
+import 'package:budget/struct/meuBancoMapping.dart' show mbCarteiraInvestimentos;
+import 'package:budget/pages/investimentosEvolucaoPage.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/addBudgetPage.dart';
@@ -1261,6 +1263,14 @@ class WalletDetailsPageState extends State<WalletDetailsPage>
                     showButtons: enableDoubleColumn(context),
                     keepOutFirst: true,
                     items: [
+                      if (widget.wallet?.walletPk == mbCarteiraInvestimentos)
+                        DropdownItemMenu(
+                          id: "evolucao-investimentos",
+                          label: "Evolução mensal",
+                          icon: Icons.show_chart_rounded,
+                          action: () => pushRoute(
+                              context, const InvestimentosEvolucaoPage()),
+                        ),
                       DropdownItemMenu(
                         id: "edit-account",
                         label: "edit-account".tr(),

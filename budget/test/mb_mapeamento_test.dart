@@ -63,7 +63,12 @@ void main() {
   test('ida e volta: meta e dívida', () {
     final m = projetarObjetivo(ObjLocal(
         pk: 'm1', nome: 'Viagem', divida: false, valor: 3000, prazo: DateTime(2027, 3, 5, 12)));
-    expect(m, {'nome': 'Viagem', 'valor_alvo': 3000.0, 'prazo': '2027-03-05'});
+    expect(m, {
+      'nome': 'Viagem',
+      'valor_alvo': 3000.0,
+      'prazo': '2027-03-05',
+      'aplicacao_ids': <String>[]
+    });
     expect(projetarObjetivo(objetivoDeDados('cashew:m1', m, divida: false)), m);
     final dv = projetarObjetivo(ObjLocal(
         pk: 'd1', nome: 'João', divida: true, receita: true, valor: 200));

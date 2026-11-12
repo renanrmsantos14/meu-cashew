@@ -69,6 +69,7 @@ Future<void> mbTrocarConta() async {
   await database.transaction(() async {
     await database.customStatement('DELETE FROM mb_registros');
     await database.customStatement('DELETE FROM mb_aplicado');
+    await database.customStatement('DELETE FROM mb_meta_aplicacao');
     await database.customStatement('DELETE FROM mb_estado');
     await database.customStatement(
         'DELETE FROM transactions WHERE transaction_pk LIKE ?',

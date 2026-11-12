@@ -2,6 +2,7 @@ import 'package:budget/database/tables.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/detectar.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
+import 'package:budget/struct/mbSync/metas.dart';
 import 'package:budget/struct/mbSync/orcamentos.dart';
 import 'package:budget/struct/mbSync/registro.dart';
 
@@ -30,7 +31,7 @@ Projetado mbProjOrcamento(Budget b) => Projetado(
         categoriaPks: b.categoryFks)),
     mbEditadoEm(b.dateTimeModified));
 
-Projetado mbProjObjetivo(Objective o) {
+Projetado mbProjObjetivo(Objective o, {List<String> aplicacoes = const []}) {
   final divida = o.type == ObjectiveType.loan;
   return Projetado(
       divida ? 'dividas' : 'metas',
@@ -41,7 +42,8 @@ Projetado mbProjObjetivo(Objective o) {
           divida: divida,
           receita: o.income,
           valor: o.amount,
-          prazo: o.endDate)),
+          prazo: o.endDate,
+          aplicacaoIds: aplicacoes)),
       mbEditadoEm(o.dateTimeModified));
 }
 
@@ -157,7 +159,10 @@ Future<Map<String, Projetado>> mbProjetarLocal(
       add(mbProjOrcamento(b));
     }
   }
-  (await database.select(database.objectives).get()).forEach((o) => add(mbProjObjetivo(o)));
+  final aplicacoesPorMeta = await mbAplicacoesPorMeta();
+  for (final o in await database.select(database.objectives).get()) {
+    add(mbProjObjetivo(o, aplicacoes: aplicacoesPorMeta[o.objectivePk] ?? const []));
+  }
 
   final escolhas = await mbTodasEscolhasDeOrcamento();
   // O servidor ainda guarda uma escolha que o padrão apagou: manda `orcamento_ids: null`.

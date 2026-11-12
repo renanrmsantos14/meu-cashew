@@ -1,3 +1,4 @@
+import 'package:budget/pages/investimentosEvolucaoPage.dart';
 import 'package:budget/colors.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
@@ -65,6 +66,15 @@ class ObjectivesListPageState extends State<ObjectivesListPage> {
       backButton: widget.backButton,
       horizontalPaddingConstrained: enableDoubleColumn(context) == false,
       actions: [
+        IconButton(
+          padding: EdgeInsetsDirectional.all(15),
+          tooltip: "Evolução dos investimentos",
+          onPressed: () => pushRoute(context, const InvestimentosEvolucaoPage()),
+          icon: Icon(
+            Icons.show_chart_rounded,
+            color: Theme.of(context).colorScheme.onSecondaryContainer,
+          ),
+        ),
         IconButton(
           padding: EdgeInsetsDirectional.all(15),
           tooltip: "edit-goals".tr(),
@@ -618,6 +628,34 @@ class ObjectiveContainer extends StatelessWidget {
                                                   context, "incomeAmount")
                                               : getColor(context, "black"),
                                     ),
+                                    if (objective.type == ObjectiveType.goal &&
+                                        objectiveAmount <= 0)
+                                      // Meta sem valor alvo (ex.: Reserva de emergência): o saldo é o das aplicações.
+                                      Tappable(
+                                        color: Colors.transparent,
+                                        borderRadius: 8,
+                                        onTap: () => pushRoute(
+                                          context,
+                                          AddObjectivePage(
+                                            routesToPopAfterDelete:
+                                                RoutesToPopAfterDelete.One,
+                                            objective: objective,
+                                          ),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsetsDirectional
+                                              .only(start: 6, top: 4, bottom: 4),
+                                          child: TextFont(
+                                            text: "Definir valor",
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            textColor: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        ),
+                                      )
+                                    else
                                     Padding(
                                       padding: const EdgeInsetsDirectional.only(
                                           bottom: 2),
