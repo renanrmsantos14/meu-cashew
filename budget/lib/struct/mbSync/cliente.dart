@@ -100,6 +100,11 @@ class MbCliente {
     );
   }
 
+  // Marca a entrada que é o salário (usado pela fila "Para revisar" quando o salário não foi detectado).
+  Future<void> definirSalario(String txId) async {
+    await _chamar('PUT', '/api/config', corpo: {'salario_id': txId});
+  }
+
   Future<Map<String, dynamic>> atualizar() =>
       _chamar('POST', '/api/sync/atualizar', corpo: const {});
 

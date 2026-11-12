@@ -2,6 +2,7 @@
 // Espelha public/regras.js do painel do Meu Banco (CATEGORIAS, traduzir, naoEhGasto, valorGasto).
 
 import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
+import 'package:budget/struct/mbSync/revisao.dart';
 
 const String mbPrefixo = "mb:";
 
@@ -142,6 +143,8 @@ const List<String> mbCategoriasProprias = [
   "Compras", "Assinaturas", "Educação", "Tarifas", "Família", "Presentes",
 ];
 const String mbCategoriaOutros = "Outros";
+// Ajuda ao pai (envio Inter -> Santander respondido como "Ajuda") é gasto em Família.
+const String mbCategoriaAjuda = "Família";
 // Cashback abate o gasto em Compras (valor positivo numa categoria de despesa).
 const String mbCategoriaCashback = "Compras";
 
@@ -376,7 +379,8 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     {required String Function(String? catId, String nomeTraduzido, bool receita)
         pkCategoria,
     List<MbCompra> compras = const [],
-    List<MbCompra> abatimentos = const []}) {
+    List<MbCompra> abatimentos = const [],
+    MbRevisoes revisoes = const MbRevisoes()}) {
   final contas = <MbConta>[];
   final brutas = <Map<String, dynamic>>[];
   final cartoes = <String, bool>{};
@@ -399,15 +403,11 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
   final naoGasto = <String>{};
   // Receitas sem ajuste ou regra do usuário: candidatas a estorno de uma compra.
   final estornos = <String>{};
+  final inicioCiclo = _mapa(json["ciclo"])["inicio"] as String?;
   for (final t in (json["transacoes"] as List? ?? const [])) {
     final id = t["id"].toString();
     if (ignoradasPks.contains(mbPkConta(t["account_id"].toString())) ||
         t["scheduled"] == 1 || t["scheduled"] == true) {
-      ignoradas++;
-      continue;
-    }
-    final gasto = ctx.ajustes[id]?["gasto"];
-    if (gasto == 0) {
       ignoradas++;
       continue;
     }
@@ -418,9 +418,28 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     final cartao = cartoes[contaId] ?? false;
     // Cartão: compra positiva vira despesa (negativa), estorno vira receita. Conta: o sinal já é o do Cashew.
     final valor = cartao ? -bruto : bruto;
-    if (gasto != 1 &&
-        (mbNaoEhGasto(categoria, descricao) ||
-            mbEhResgateSantander(bancos[contaId], valor, descricao))) {
+    // Fila "Para revisar" (só conta): a resposta do usuário decide o que Pix e envios ao Santander são.
+    // Só vale no ciclo atual (o histórico não é reclassificado) ou onde o usuário já respondeu.
+    final noCiclo = inicioCiclo != null &&
+        ((t["date"] ?? "").toString().compareTo(inicioCiclo) >= 0);
+    final rev = cartao || !(noCiclo || revisoes.decisoes.containsKey(id))
+        ? null
+        : mbTipoDeRevisao(descricao: descricao, valor: valor, categoria: categoria);
+    final resposta = rev == null ? null : revisoes.resposta(id, rev);
+    final envioSantander = rev?.tipo == 'envio_santander';
+    // Inter -> Santander só é gasto se for "ajuda"; o ajuste do painel não vale aqui (igual ao Worker).
+    final gasto = envioSantander ? null : ctx.ajustes[id]?["gasto"];
+    if (gasto == 0) {
+      ignoradas++;
+      continue;
+    }
+    final foraPelaResposta = (envioSantander && resposta != 'ajuda') ||
+        (rev?.tipo == 'pix_recebido' && resposta == 'devolucao');
+    if (foraPelaResposta ||
+        (gasto != 1 &&
+            !(envioSantander && resposta == 'ajuda') &&
+            (mbNaoEhGasto(categoria, descricao) ||
+                mbEhResgateSantander(bancos[contaId], valor, descricao)))) {
       naoGasto.add(mbPkTransacao(id));
       ignoradas++;
       continue;
@@ -438,12 +457,27 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
         receita: receita,
         ctx: ctx);
     // Sem categoria do usuário (ajuste, regra ou servidor): despesa vai para as categorias próprias.
-    final nomeCategoria = ef.fonte == 'banco' && !receita
+    var nomeCategoria = ef.fonte == 'banco' && !receita
         ? mbCategoriaPropria(categoria)
         : mbTraduzirCategoria(ef.category ?? categoria);
+    var categoriaId = ef.categoriaId;
+    // Categoria que o próprio usuário escolheu (ajuste ou regra) vale mais que a da fila.
+    if (ef.fonte != 'ajuste' && ef.fonte != 'regra') {
+      if (envioSantander) {
+        nomeCategoria = mbCategoriaAjuda;
+        categoriaId = null;
+      } else if (rev?.tipo == 'pix_enviado') {
+        // Resposta ou memória do destinatário; sem elas, gasto "A classificar" até o usuário responder.
+        nomeCategoria = mbCategoriaAClassificar;
+        categoriaId = revisoes.categoriaId(id, rev!);
+      }
+    }
     final pendente = t["status"] == "PENDING";
     final nome = descricao.trim().isEmpty ? "Sem descrição" : descricao.trim();
-    final automatica = receita && ef.fonte != 'ajuste' && ef.fonte != 'regra';
+    // Reembolso e renda decididos na fila não são estorno automático (reembolso abate abaixo, renda é receita).
+    final decidida = resposta == 'reembolso' || resposta == 'renda';
+    final automatica =
+        receita && ef.fonte != 'ajuste' && ef.fonte != 'regra' && !decidida;
     final cashback = automatica && mbEhCashback(categoria, descricao, valor);
     if (automatica && !cashback) estornos.add(mbPkTransacao(id));
     final tx = MbTransacao(
@@ -455,13 +489,17 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
       data: _parseData(t["date"] as String?),
       carteiraPk: mbPkConta(contaId),
       categoriaNome: nomeCategoria,
-      categoriaPk: pkCategoria(ef.categoriaId, nomeCategoria, receita),
+      categoriaPk: pkCategoria(categoriaId, nomeCategoria, receita),
       pendente: pendente,
     );
+    // Reembolso abate o gasto como estorno genérico (categoria "Outros"), não entra como renda.
     transacoes.add(cashback
         ? tx.abatendo(mbCategoriaCashback,
             pkCategoria(null, mbCategoriaCashback, false))
-        : tx);
+        : resposta == 'reembolso'
+            ? tx.abatendo(mbCategoriaOutros,
+                pkCategoria(null, mbCategoriaOutros, false))
+            : tx);
   }
   _abaterEstornos(transacoes, estornos, compras, abatimentos);
   final pendentes = <String>{
@@ -483,7 +521,11 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     contasIgnoradasPks: ignoradasPks,
     naoGastoPks: naoGasto,
     categoriasProprias: {
-      for (final n in [...mbCategoriasProprias, mbCategoriaOutros])
+      for (final n in [
+        ...mbCategoriasProprias,
+        mbCategoriaOutros,
+        mbCategoriaAClassificar
+      ])
         n: pkCategoria(null, n, false)
     },
     investimentos: json["investimentos"] is List
