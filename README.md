@@ -291,6 +291,6 @@ Como configurar a sincronização:
 2. No app: Configurações > Meu Banco. Confira o endereço, cole o token e toque em "Sincronizar agora".
 3. Depois disso a sincronização roda ao abrir o app e ao puxar a tela para atualizar.
 
-O token fica no armazenamento seguro do aparelho (fora dos backups do Cashew). "Desconectar" apaga o token e o ponto de sincronização, sem apagar as transações importadas. Futuras parcelas, pagamentos de fatura, investimentos e transferências entre contas próprias não são importados.
+O token fica no armazenamento seguro do aparelho (fora dos backups do Cashew). "Desconectar" apaga o token e o ponto de sincronização, sem apagar as transações importadas. Futuras parcelas, pagamentos de fatura e transferências entre contas próprias não são importados como gastos. A conta corrente do Santander fica fora do app (carteira e lançamentos). Os investimentos entram na carteira "Investimentos", um ajuste de saldo por investimento com o saldo atual (fora de gastos e receitas).
 
 Build release assinado: crie `budget/android/key.properties` (ignorado pelo git) com `externalFile=/caminho/do/key.properties` ou com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`.

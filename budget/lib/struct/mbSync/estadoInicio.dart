@@ -285,7 +285,9 @@ JoinedSelectStatement<HasResultSet, dynamic> _consultaUltimas() =>
     innerJoin(database.categories,
         database.categories.categoryPk.equalsExp(database.transactions.categoryFk))
   ])
-    ..where(database.transactions.paid.equals(true))
+    // Investimentos (mb:inv:) são saldos, não lançamentos.
+    ..where(database.transactions.paid.equals(true) &
+        database.transactions.transactionPk.like('mb:inv:%').not())
     ..orderBy([OrderingTerm.desc(database.transactions.dateCreated)])
     ..limit(5);
 

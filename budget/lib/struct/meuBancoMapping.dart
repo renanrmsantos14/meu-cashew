@@ -152,12 +152,29 @@ final RegExp _descFora = RegExp(
 bool mbNaoEhGasto(String? categoria, String? descricao) =>
     _catFora.hasMatch(categoria ?? "") || _descFora.hasMatch(descricao ?? "");
 
+// Conta corrente do Santander é usada por outra pessoa: não entra no app (só os investimentos de lá contam).
+final RegExp _bancoIgnorado = RegExp(r"santander", caseSensitive: false);
+
+bool mbContaIgnorada(Map c) =>
+    c["type"] == "BANK" &&
+    (c["subtype"] == null || c["subtype"] == "CHECKING_ACCOUNT") &&
+    _bancoIgnorado.hasMatch("${c["name"] ?? ""} ${c["bank"] ?? ""}");
+
+const String mbCarteiraInvestimentos = mbPrefixo + "investimentos";
+
+class MbInvestimento {
+  final String pk;
+  final String nome;
+  final double saldo;
+  final String? banco;
+  const MbInvestimento(this.pk, this.nome, this.saldo, this.banco);
+}
+
 class MbConta {
   final String walletPk;
   final String nome;
-  final String? moeda;
   final bool cartao;
-  const MbConta(this.walletPk, this.nome, this.cartao, {this.moeda});
+  const MbConta(this.walletPk, this.nome, this.cartao);
 }
 
 class MbTransacao {
@@ -200,6 +217,10 @@ class MbResultado {
   final List<dynamic> avisos;
   final Map<String, dynamic> config;
   final String? sincronizadoEm;
+  // carteiras ("mb:" + id) de contas ignoradas, a apagar se já existirem
+  final Set<String> contasIgnoradasPks;
+  // null = servidor antigo, sem investimentos (não mexe na carteira)
+  final List<MbInvestimento>? investimentos;
   const MbResultado(
     this.agora,
     this.contas,
@@ -212,11 +233,14 @@ class MbResultado {
     this.avisos = const [],
     this.config = const {},
     this.sincronizadoEm,
+    this.contasIgnoradasPks = const {},
+    this.investimentos,
   });
 }
 
 String mbPkTransacao(String id) => mbPrefixo + id;
 String mbPkConta(String contaId) => mbPrefixo + contaId;
+String mbPkInvestimento(String id) => mbPrefixo + "inv:" + id;
 String mbPkCategoria(String nome, bool receita) =>
     mbPrefixo + "cat:" + (receita ? "r:" : "d:") + nome;
 
@@ -237,19 +261,24 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
   final contas = <MbConta>[];
   final brutas = <Map<String, dynamic>>[];
   final cartoes = <String, bool>{};
+  final ignoradasPks = <String>{};
   for (final c in (json["contas"] as List? ?? const [])) {
     final id = c["id"].toString();
+    if (mbContaIgnorada(c)) {
+      ignoradasPks.add(mbPkConta(id));
+      continue;
+    }
     final cartao = c["type"] == "CREDIT";
     cartoes[id] = cartao;
     brutas.add(_mapa(c));
-    contas.add(MbConta(mbPkConta(id), (c["name"] ?? id).toString(), cartao,
-        moeda: "brl"));
+    contas.add(MbConta(mbPkConta(id), (c["name"] ?? id).toString(), cartao));
   }
   final transacoes = <MbTransacao>[];
   int ignoradas = 0;
   for (final t in (json["transacoes"] as List? ?? const [])) {
     final id = t["id"].toString();
-    if (t["scheduled"] == 1 || t["scheduled"] == true) {
+    if (ignoradasPks.contains(mbPkConta(t["account_id"].toString())) ||
+        t["scheduled"] == 1 || t["scheduled"] == true) {
       ignoradas++;
       continue;
     }
@@ -313,5 +342,17 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     avisos: (json["avisos"] as List?) ?? const [],
     config: _mapa(json["config"]),
     sincronizadoEm: json["sincronizado_em"] as String?,
+    contasIgnoradasPks: ignoradasPks,
+    investimentos: json["investimentos"] is List
+        ? [
+            for (final i in json["investimentos"] as List)
+              if (i is Map && i["id"] != null && i["saldo"] is num)
+                MbInvestimento(
+                    mbPkInvestimento(i["id"].toString()),
+                    (i["nome"] ?? "Investimento").toString().trim(),
+                    (i["saldo"] as num).toDouble(),
+                    i["banco"]?.toString())
+          ]
+        : null,
   );
 }

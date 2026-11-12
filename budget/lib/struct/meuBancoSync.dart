@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:budget/database/tables.dart';
+import 'package:budget/pages/addWalletPage.dart'
+    show initializeBalanceCorrectionCategory;
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/mbSync/aplicarLocal.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
@@ -15,7 +17,7 @@ import 'package:budget/struct/meuBancoMapping.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart' show DateFormat;
 
@@ -174,7 +176,10 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
     await database.transaction(() => _aplicar(resultado));
 
     final estado = <String, String>{
-      'contas': jsonEncode(json['contas'] ?? const []),
+      'contas': jsonEncode([
+        for (final c in (json['contas'] as List? ?? const []))
+          if (c is Map && !mbContaIgnorada(c)) c
+      ]),
       'faturas': jsonEncode(json['faturas'] ?? const {}),
       'ciclo': jsonEncode(json['ciclo']),
       'avisos': jsonEncode(json['avisos'] ?? const []),
@@ -208,20 +213,24 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
 // Transações `mb:` entram com dateTimeModified fixo (2000), para não contarem como edição do usuário.
 final DateTime _semEdicao = DateTime.utc(2000);
 
+Future<void> _criarCarteiraSeFaltar(String pk, String nome) async {
+  if (await database.getWalletInstanceOrNull(pk) != null) return;
+  await database.createOrUpdateWallet(TransactionWallet(
+    walletPk: pk,
+    name: nome,
+    dateCreated: DateTime.now(),
+    dateTimeModified: null,
+    order: (await database.getAllWallets()).length,
+    currency: "brl",
+    decimals: 2,
+    homePageWidgetDisplay: defaultWalletHomePageWidgetDisplay,
+  ));
+}
+
 Future<void> _aplicar(MbResultado r) async {
   // Carteiras: criadas se faltarem; as existentes não são tocadas (preserva ordem e edições).
   for (final conta in r.contas) {
-    if (await database.getWalletInstanceOrNull(conta.walletPk) != null) continue;
-    await database.createOrUpdateWallet(TransactionWallet(
-      walletPk: conta.walletPk,
-      name: conta.nome,
-      dateCreated: DateTime.now(),
-      dateTimeModified: null,
-      order: (await database.getAllWallets()).length,
-      currency: conta.moeda,
-      decimals: 2,
-      homePageWidgetDisplay: defaultWalletHomePageWidgetDisplay,
-    ));
+    await _criarCarteiraSeFaltar(conta.walletPk, conta.nome);
   }
   // Categorias por nome: criadas se faltarem.
   final categoriasVistas = <String>{};
@@ -264,6 +273,22 @@ Future<void> _aplicar(MbResultado r) async {
         );
   }
   final removidos = <String>[];
+  // Conta ignorada importada antes desta regra: apaga a carteira e os lançamentos dela.
+  // Os pks saem de mb_aplicado; senão a projeção os veria como apagados e mandaria "não é gasto" ao servidor.
+  for (final pk in r.contasIgnoradasPks) {
+    if (await database.getWalletInstanceOrNull(pk) == null) continue;
+    for (final t in await database.getAllTransactionsFromWallet(pk)) {
+      if (t.transactionPk.startsWith(mbPrefixo)) removidos.add(t.transactionPk);
+    }
+    // Direto no Drift: deleteWallet mandaria os lançamentos para "apagados recentemente".
+    await (database.delete(database.transactions)
+          ..where((t) => t.walletFk.equals(pk)))
+        .go();
+    await (database.delete(database.wallets)..where((x) => x.walletPk.equals(pk)))
+        .go();
+    await database.fixOrderWallets();
+  }
+  if (r.investimentos != null) await _aplicarInvestimentos(r.investimentos!);
   // Pendente importada que saiu de pendentes some (virou lançada com outro id ou foi cancelada).
   for (final conta in r.contas) {
     final daCarteira =
@@ -280,6 +305,56 @@ Future<void> _aplicar(MbResultado r) async {
   }
   await mbGravarAplicado({for (final t in r.transacoes) t.pk: t.categoriaPk},
       removidos);
+}
+
+// Cada investimento vira um ajuste de saldo (categoria "0", fora de gastos e receitas) na carteira "Investimentos",
+// com o saldo atual. A data do primeiro import é mantida para não aparecer como lançamento novo a cada sync.
+Future<void> _aplicarInvestimentos(List<MbInvestimento> lista) async {
+  final existentes = {
+    for (final t
+        in await database.getAllTransactionsFromWallet(mbCarteiraInvestimentos))
+      t.transactionPk: t
+  };
+  if (lista.isEmpty && existentes.isEmpty) return;
+  await _criarCarteiraSeFaltar(mbCarteiraInvestimentos, "Investimentos");
+  await initializeBalanceCorrectionCategory();
+  for (final i in lista) {
+    final antes = existentes[i.pk];
+    final nota = i.banco ?? "";
+    if (antes != null &&
+        antes.amount == i.saldo &&
+        antes.name == i.nome &&
+        antes.note == nota) continue;
+    final data = antes?.dateCreated ?? DateTime.now();
+    await database.into(database.transactions).insertOnConflictUpdate(
+          TransactionsCompanion(
+            transactionPk: Value(i.pk),
+            name: Value(i.nome),
+            amount: Value(i.saldo),
+            note: Value(nota),
+            categoryFk: const Value("0"),
+            walletFk: const Value(mbCarteiraInvestimentos),
+            dateCreated: Value(data),
+            dateTimeModified: Value(_semEdicao),
+            originalDateDue: Value(data),
+            income: Value(i.saldo > 0),
+            paid: const Value(true),
+            skipPaid: const Value(false),
+            methodAdded: const Value(MethodAdded.csv),
+          ),
+        );
+  }
+  // Resgatado (saiu da lista): o saldo some.
+  final atuais = {for (final i in lista) i.pk};
+  final sairam = [
+    for (final pk in existentes.keys)
+      if (pk.startsWith(mbPrefixo + "inv:") && !atuais.contains(pk)) pk
+  ];
+  if (sairam.isNotEmpty) {
+    await (database.delete(database.transactions)
+          ..where((t) => t.transactionPk.isIn(sairam)))
+        .go();
+  }
 }
 
 // Pede ao Worker para consultar a Pluggy agora e, se deu certo, sincroniza. Retorna a mensagem do snackbar.
