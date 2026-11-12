@@ -1,5 +1,3 @@
-import 'package:budget/pages/homePage/painelDesktop.dart';
-import 'package:budget/widgets/editorial/layoutDesktop.dart' show ehDesktop;
 import 'package:budget/colors.dart';
 import 'package:budget/database/generatePreviewData.dart';
 import 'package:budget/database/tables.dart';
@@ -127,8 +125,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // Pareado: o desktop usa o painel; o celular fica com a Início original do Cashew.
-    if (meuBancoPareado.value && ehDesktop(context)) return const PainelDesktop();
     bool showUsername = appStateSettings["username"] != "";
     bool showGreeting = appStateSettings["enableGreetingMessage"] == true;
     Widget slidingSelector = GestureDetector(
