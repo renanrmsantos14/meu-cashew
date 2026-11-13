@@ -85,7 +85,7 @@ class _CategoryLimitsState extends State<CategoryLimits> {
                           TextFont(
                             fontSize: 15,
                             textColor: isOver
-                                ? getColor(context, "expenseAmount")
+                                ? getColor(context, "overspentAmount")
                                 : getColor(context, "black").withOpacity(
                                     appStateSettings["increaseTextContrast"] ==
                                             true
@@ -116,7 +116,7 @@ class _CategoryLimitsState extends State<CategoryLimits> {
                             child: TextFont(
                               fontSize: 15,
                               textColor: isOver
-                                  ? getColor(context, "expenseAmount")
+                                  ? getColor(context, "overspentAmount")
                                   : getColor(context, "textLight"),
                               text: (widget.isAbsoluteSpendingLimit
                                       ? (convertToMoney(
@@ -405,7 +405,7 @@ class CategoryLimitEntry extends StatelessWidget {
                           return TextFont(
                             fontSize: 15,
                             textColor: isOver
-                                ? getColor(context, "expenseAmount")
+                                ? getColor(context, "overspentAmount")
                                 : getColor(context, "textLight"),
                             text: isAbsoluteSpendingLimit
                                 ? (convertToMoney(

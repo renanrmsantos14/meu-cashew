@@ -94,6 +94,7 @@ class BudgetsListPageState extends State<BudgetsListPage> {
                           RoutesToPopAfterDelete.PreventDelete,
                     ),
                     height: 180,
+                    labelUnder: "add-budget".tr(),
                   ),
                 ),
               );
@@ -120,6 +121,7 @@ class BudgetsListPageState extends State<BudgetsListPage> {
                                   routesToPopAfterDelete:
                                       RoutesToPopAfterDelete.PreventDelete,
                                 ),
+                                labelUnder: "add-budget".tr(),
                               );
                             } else {
                               return BudgetContainer(
@@ -141,6 +143,7 @@ class BudgetsListPageState extends State<BudgetsListPage> {
                                       RoutesToPopAfterDelete.PreventDelete,
                                 ),
                                 height: 180,
+                                labelUnder: "add-budget".tr(),
                               );
                             } else {
                               return Padding(

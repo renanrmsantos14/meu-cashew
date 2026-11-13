@@ -213,7 +213,7 @@ class CategoryEntry extends StatelessWidget {
                                   fontSize: 20,
                                   textColor: isOverspent
                                       ? overSpentColor ??
-                                          getColor(context, "expenseAmount")
+                                          getColor(context, "overspentAmount")
                                       : showIncomeExpenseIcons &&
                                               categorySpent != 0
                                           ? categorySpent > 0
@@ -238,8 +238,8 @@ class CategoryEntry extends StatelessWidget {
                                           fontSize: 14,
                                           textColor: isOverspent
                                               ? overSpentColor ??
-                                                  getColor(
-                                                      context, "expenseAmount")
+                                                  getColor(context,
+                                                      "overspentAmount")
                                               : getColor(context, "black")
                                                   .withOpacity(0.3),
                                         ),

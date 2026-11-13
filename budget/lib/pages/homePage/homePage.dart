@@ -26,7 +26,6 @@ import 'package:budget/pages/homePage/homePageCreditDebts.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/animatedExpanded.dart';
 import 'package:budget/widgets/button.dart';
-import 'package:budget/widgets/framework/pageFramework.dart';
 import 'package:budget/widgets/navigationFramework.dart';
 import 'package:budget/widgets/openBottomSheet.dart';
 import 'package:budget/widgets/ratingPopup.dart';
@@ -56,7 +55,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => HomePageState();
 }
 
-class HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class HomePageState extends State<HomePage> {
   void refreshState() {
     setState(() {});
   }
@@ -80,36 +79,18 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   bool showElevation = false;
   late ScrollController _scrollController;
-  late AnimationController _animationControllerHeader;
-  late AnimationController _animationControllerHeader2;
   int selectedSlidingSelector = 1;
 
   void initState() {
     super.initState();
-    _animationControllerHeader = AnimationController(vsync: this, value: 1);
-    _animationControllerHeader2 = AnimationController(vsync: this, value: 1);
-
     _scrollController = ScrollController();
-    _scrollController.addListener(_scrollListener);
     meuBancoPareado.addListener(refreshState);
     meuBancoVerificarPareado();
-  }
-
-  _scrollListener() {
-    double percent = _scrollController.offset / (200);
-    if (percent <= 1) {
-      double offset = _scrollController.offset;
-      if (percent >= 1) offset = 0;
-      _animationControllerHeader.value = 1 - offset / (200);
-      _animationControllerHeader2.value = 1 - offset * 2 / (200);
-    }
   }
 
   @override
   void dispose() {
     meuBancoPareado.removeListener(refreshState);
-    _animationControllerHeader.dispose();
-    _animationControllerHeader2.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -235,9 +216,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
           : null,
       "transactionsList": homePageTransactionsList ?? SizedBox.shrink(),
     };
-    bool showWelcomeBanner =
-        isHomeScreenSectionEnabled(context, "showUsernameWelcomeBanner");
-    bool useSmallBanner = showWelcomeBanner == false;
 
     List<String> homePageSectionsFullScreenCenter = [];
     List<String> homePageSectionsFullScreenLeft = [];
@@ -276,21 +254,25 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   controller: _scrollController,
                   children: [
                     PreviewDemoWarning(),
-                    if (useSmallBanner) SizedBox(height: 13),
+                    SizedBox(height: 8),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        useSmallBanner
-                            ? Expanded(
-                                child: HomePageWelcomeBannerSmall(
-                                  showUsername: showUsername,
-                                  showGreeting: showGreeting,
-                                  username: appStateSettings["username"] ?? "",
-                                ),
-                              )
-                            : SizedBox.shrink(),
+                        Expanded(
+                          // Toque no nome abre a edição (como no banner antigo).
+                          child: GestureDetector(
+                            onTap: () => enterNameBottomSheet(context),
+                            child: HomePageWelcomeBannerSmall(
+                              showUsername: showUsername &&
+                                  isHomeScreenSectionEnabled(
+                                      context, "showUsernameWelcomeBanner"),
+                              showGreeting: showGreeting,
+                              username: appStateSettings["username"] ?? "",
+                            ),
+                          ),
+                        ),
                         Tooltip(
                           message: "edit-home".tr(),
                           child: IconButton(
@@ -310,41 +292,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         height: 1,
                         color: Theme.of(context).colorScheme.background),
 
-                    showWelcomeBanner
-                        ? ConstrainedBox(
-                            constraints: BoxConstraints(
-                                minHeight: getExpandedHeaderHeight(
-                                        context, null,
-                                        isHomePageSpace: true) /
-                                    1.34),
-                            child: Container(
-                              // Subtract one (1) here because of the thickness of the wiper above
-                              alignment: AlignmentDirectional.bottomStart,
-                              padding: EdgeInsetsDirectional.only(
-                                  start: 9,
-                                  bottom: enableDoubleColumn(context) ? 10 : 17,
-                                  end: 9),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  HomePageUsername(
-                                    animationControllerHeader:
-                                        _animationControllerHeader,
-                                    animationControllerHeader2:
-                                        _animationControllerHeader2,
-                                    showUsername: showUsername,
-                                    showGreeting: showGreeting,
-                                    enterNameBottomSheet: enterNameBottomSheet,
-                                    username:
-                                        appStateSettings["username"] ?? "",
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : SizedBox(height: 5),
+                    SizedBox(height: 5),
                     // Banco desconectado (Meu Banco): faixa fixa no topo, antes das seções.
                     HomePageConexaoCaida(),
                     // Not full screen

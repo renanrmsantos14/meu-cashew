@@ -1,3 +1,4 @@
+import 'package:budget/struct/editorial.dart';
 import 'package:budget/database/generatePreviewData.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
@@ -874,7 +875,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   updateInitial() async {
     if (widget.transaction != null) {
       orcamentosCarregados = false;
-      mbOrcamentosDaTransacao(widget.transaction!.transactionPk).then((escolha) {
+      mbOrcamentosDaTransacao(widget.transaction!.transactionPk)
+          .then((escolha) {
         if (!mounted) return;
         setState(() {
           selectedOrcamentos = escolha ?? {mbOrcamentoGeralPk};
@@ -1065,19 +1067,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
   @override
   Widget build(BuildContext context) {
-    Color categoryColor = dynamicPastel(
-      context,
-      HexColor(
-        selectedCategory?.colour,
-        defaultColor: dynamicPastel(
-          context,
-          Theme.of(context).colorScheme.primary,
-          amount: appStateSettings["materialYou"] ? 0.55 : 0.2,
-        ),
-      ),
-      amount: 0.35,
-    );
-
     Widget transactionTextInput = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
@@ -1752,96 +1741,104 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     bool enableBalanceTransferTab = widget.transaction == null &&
         Provider.of<AllWallets>(context).indexedByPk.keys.length > 1;
 
-    Widget transactionAmountAndCategoryHeader = AnimatedContainer(
-      curve: Curves.easeInOut,
-      duration: Duration(milliseconds: 300),
-      color: categoryColor,
+    Widget transactionAmountAndCategoryHeader = Container(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: cores(context).line)),
+      ),
+      padding: const EdgeInsetsDirectional.only(top: 8),
       child: Column(
         children: [
-          GestureDetector(
-            onLongPress: () async {
-              if (enableBalanceTransferTab) {
-                await openBottomSheet(
-                  context,
-                  PopupFramework(
-                    hasPadding: false,
-                    child: ShowTransactionsBalanceTransferTabSettingToggle(),
-                  ),
-                );
-                setState(() {});
-              }
-            },
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  Flexible(
-                    flex: 2,
-                    child: IncomeExpenseTabSelector(
-                      hasBorderRadius: false,
-                      onTabChanged: setSelectedIncome,
-                      initialTabIsIncome: selectedIncome,
-                      syncWithInitial: true,
-                      color: categoryColor,
-                      unselectedColor: Colors.black.withOpacity(0.2),
-                      unselectedLabelColor: Colors.white.withOpacity(0.3),
-                      incomeLabel: isAddedToLoanObjective
-                          ? "collected".tr()
-                          : selectedType == TransactionSpecialType.debt ||
-                                  selectedType == TransactionSpecialType.credit
-                              ? "borrowed".tr()
-                              : selectedCategory?.categoryPk == "0"
-                                  ? "transfer-in".tr()
-                                  : null,
-                      incomeIconColor: isAddedToLoanObjective ||
-                              selectedType == TransactionSpecialType.debt ||
-                              selectedType == TransactionSpecialType.credit
-                          ? getColor(context, "unPaidOverdue")
-                          : null,
-                      expenseLabel: isAddedToLoanObjective
-                          ? "paid".tr()
-                          : selectedType == TransactionSpecialType.debt ||
-                                  selectedType == TransactionSpecialType.credit
-                              ? "lent".tr()
-                              : selectedCategory?.categoryPk == "0"
-                                  ? "transfer-out".tr()
-                                  : null,
-                      expenseIconColor: isAddedToLoanObjective ||
-                              selectedType == TransactionSpecialType.debt ||
-                              selectedType == TransactionSpecialType.credit
-                          ? getColor(context, "unPaidUpcoming")
-                          : null,
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            child: GestureDetector(
+              onLongPress: () async {
+                if (enableBalanceTransferTab) {
+                  await openBottomSheet(
+                    context,
+                    PopupFramework(
+                      hasPadding: false,
+                      child: ShowTransactionsBalanceTransferTabSettingToggle(),
                     ),
-                  ),
-                  if (appStateSettings["showTransactionsBalanceTransferTab"] ==
-                          true &&
-                      enableBalanceTransferTab)
+                  );
+                  setState(() {});
+                }
+              },
+              child: IntrinsicHeight(
+                child: Row(
+                  children: [
                     Flexible(
-                      flex: 1,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Tappable(
-                              color: Colors.black.withOpacity(0.2),
-                              onTap: () async {
-                                openTransferBalancePopup();
-                              },
-                              child: ExpenseIncomeSelectorLabel(
-                                selectedIncome: false,
-                                showIcons: false,
-                                label: "transfer".tr(),
-                                isIncome: true,
-                                customIcon: Icon(
-                                  appStateSettings["outlinedIcons"]
-                                      ? Icons.compare_arrows_outlined
-                                      : Icons.compare_arrows_rounded,
+                      flex: 2,
+                      child: IncomeExpenseTabSelector(
+                        hasBorderRadius: true,
+                        onTabChanged: setSelectedIncome,
+                        initialTabIsIncome: selectedIncome,
+                        syncWithInitial: true,
+                        incomeLabel: isAddedToLoanObjective
+                            ? "collected".tr()
+                            : selectedType == TransactionSpecialType.debt ||
+                                    selectedType ==
+                                        TransactionSpecialType.credit
+                                ? "borrowed".tr()
+                                : selectedCategory?.categoryPk == "0"
+                                    ? "transfer-in".tr()
+                                    : null,
+                        incomeIconColor: isAddedToLoanObjective ||
+                                selectedType == TransactionSpecialType.debt ||
+                                selectedType == TransactionSpecialType.credit
+                            ? getColor(context, "unPaidOverdue")
+                            : null,
+                        expenseLabel: isAddedToLoanObjective
+                            ? "paid".tr()
+                            : selectedType == TransactionSpecialType.debt ||
+                                    selectedType ==
+                                        TransactionSpecialType.credit
+                                ? "lent".tr()
+                                : selectedCategory?.categoryPk == "0"
+                                    ? "transfer-out".tr()
+                                    : null,
+                        expenseIconColor: isAddedToLoanObjective ||
+                                selectedType == TransactionSpecialType.debt ||
+                                selectedType == TransactionSpecialType.credit
+                            ? getColor(context, "unPaidUpcoming")
+                            : null,
+                      ),
+                    ),
+                    if (appStateSettings[
+                                "showTransactionsBalanceTransferTab"] ==
+                            true &&
+                        enableBalanceTransferTab) ...[
+                      // Respiro entre o controle segmentado e o botão Transferir.
+                      const SizedBox(width: 8),
+                      Flexible(
+                        flex: 1,
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Tappable(
+                                color: cores(context).surf,
+                                borderRadius: 14,
+                                onTap: () async {
+                                  openTransferBalancePopup();
+                                },
+                                child: ExpenseIncomeSelectorLabel(
+                                  selectedIncome: false,
+                                  showIcons: false,
+                                  label: "transfer".tr(),
+                                  isIncome: true,
+                                  customIcon: Icon(
+                                    appStateSettings["outlinedIcons"]
+                                        ? Icons.compare_arrows_outlined
+                                        : Icons.compare_arrows_rounded,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -3079,7 +3076,8 @@ Future<bool> addAssociatedTitles(
 
 /// Escolha dos orçamentos da transação (vários). Só o Geral = padrão; nenhum = fora de todos.
 class SelectOrcamentos extends StatefulWidget {
-  const SelectOrcamentos({required this.selecionados, required this.aoMudar, super.key});
+  const SelectOrcamentos(
+      {required this.selecionados, required this.aoMudar, super.key});
   final Set<String> selecionados;
   final void Function(Set<String>) aoMudar;
 
@@ -3127,7 +3125,8 @@ class _SelectOrcamentosState extends State<SelectOrcamentos> {
                     context,
                     lightenPastel(
                         HexColor(b?.colour,
-                            defaultColor: Theme.of(context).colorScheme.primary),
+                            defaultColor:
+                                Theme.of(context).colorScheme.primary),
                         amount: 0.3),
                     amount: 0.4),
               ),

@@ -869,44 +869,14 @@ getTotalSubscriptions(AllWallets allWallets, SelectedSubscriptionsType type,
   return total;
 }
 
-List<BoxShadow> boxShadowGeneral(context) {
-  if (appStateSettings["disableShadows"] == true) return [];
-  return [
-    BoxShadow(
-      color: getColor(context, "shadowColorLight").withAlpha(30),
-      blurRadius: 20,
-      offset: Offset(0, 0),
-      spreadRadius: 8,
-    ),
-  ];
-}
+// Visual plano: cartões se separam por cor de superfície e borda, não por sombra.
+List<BoxShadow> boxShadowGeneral(context) => const [];
 
-List<BoxShadow> boxShadowSharp(context) {
-  if (appStateSettings["disableShadows"] == true) return [];
-  return [
-    BoxShadow(
-      color: getColor(context, "shadowColorLight").withAlpha(30),
-      blurRadius: 2,
-      offset: Offset(0, 0),
-      spreadRadius: 2,
-    ),
-  ];
-}
+List<BoxShadow> boxShadowSharp(context) => const [];
 
-List<BoxShadow> boxShadowCategoryPercent(context) {
-  if (appStateSettings["disableShadows"] == true) return [];
-  return [
-    BoxShadow(
-      color: getColor(context, "shadowColor").withOpacity(0.4),
-      blurRadius: 3,
-      offset: Offset(0, 0),
-      spreadRadius: 2,
-    ),
-  ];
-}
+List<BoxShadow> boxShadowCategoryPercent(context) => const [];
 
 List<BoxShadow>? boxShadowCheck(list) {
-  if (appStateSettings["disableShadows"] == true) return null;
   if (appStateSettings["batterySaver"]) return null;
   return list;
 }
