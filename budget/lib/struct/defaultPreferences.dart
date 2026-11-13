@@ -34,6 +34,7 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     "selectedSubscriptionType": 0,
     "accentColor": toHexString(Color(0xFF2340D8)),
     "temaPronto": "sistema",
+    "acento": "verde",
     "accentSystemColor": false,
     "widgetOpacity": 1,
     "widgetTheme": "system", //system, light, dark

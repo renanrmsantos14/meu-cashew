@@ -381,7 +381,7 @@ class _DetalheTransacaoState extends State<DetalheTransacao> {
                   const SizedBox(height: 16),
                   _blocoRegra(context, m),
                   const SizedBox(height: 24),
-                  Text('HISTÓRICO AQUI', style: EdTexto.h2(context)),
+                  Text('Histórico aqui', style: EdTexto.h2(context)),
                   const SizedBox(height: 8),
                   for (final h in m.historico)
                     SizedBox(

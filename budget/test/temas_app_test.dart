@@ -64,15 +64,16 @@ void main() {
   test('getSettingConstants usa o modo do tema pronto', () {
     final s = getSettingConstants({
       'theme': 'system',
-      'temaPronto': 'nord',
+      'temaPronto': 'padrao-escuro',
       'accentColor': '0xFF000000',
     });
     expect(s['theme'], ThemeMode.dark);
   });
 
   test('getLightTheme/getDarkTheme usam o tema ativo', () {
-    _config('nord');
-    expect(getLightTheme().scaffoldBackgroundColor, temaPorId('nord').cores.bg);
+    _config('padrao-escuro');
+    expect(getLightTheme().scaffoldBackgroundColor,
+        temaPorId('padrao-escuro').cores.bg);
     _config('sistema');
     expect(getDarkTheme().scaffoldBackgroundColor,
         temaPorId('padrao-escuro').cores.bg);

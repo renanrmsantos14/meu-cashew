@@ -18,47 +18,9 @@ double contraste(Color a, Color b) {
   return (max(x, y) + 0.05) / (min(x, y) + 0.05);
 }
 
-const _idsEsperados = [
-  'padrao-claro',
-  'padrao-escuro',
-  'azul-outlook',
-  'grafite',
-  'meia-noite',
-  'sepia-papel',
-  'floresta',
-  'oceano',
-  'lavanda',
-  'rose',
-  'ambar',
-  'nord',
-  'solarized-claro',
-  'solarized-escuro',
-  'dracula',
-  'oled-preto',
-  'alto-contraste-claro',
-  'alto-contraste-escuro',
-];
+const _idsEsperados = ['padrao-claro', 'padrao-escuro'];
 
-const _nomesEsperados = [
-  'Padrão claro',
-  'Padrão escuro',
-  'Azul Outlook',
-  'Grafite',
-  'Meia-noite',
-  'Sépia / Papel',
-  'Floresta',
-  'Oceano',
-  'Lavanda',
-  'Rosé',
-  'Âmbar',
-  'Nord',
-  'Solarized claro',
-  'Solarized escuro',
-  'Dracula',
-  'OLED preto',
-  'Alto contraste claro',
-  'Alto contraste escuro',
-];
+const _nomesEsperados = ['Claro', 'Escuro'];
 
 const _chaves = [
   'white',
@@ -102,10 +64,19 @@ void main() {
     expect(temaPorId('xyz').id, 'padrao-claro');
   });
 
-  for (final t in temasProntos) {
-    final minimo = t.id.startsWith('alto-contraste') ? 7.0 : 4.5;
+  TemaPronto ativo(String id, String acento) {
+    appStateSettings["temaPronto"] = id;
+    appStateSettings["acento"] = acento;
+    return temaAtivo(Brightness.light);
+  }
 
-    test('contraste de ${t.id} (mín. $minimo)', () {
+  for (final base in temasProntos) {
+   for (final acento in acentos) {
+    const minimo = 4.5;
+    final nome = '${base.id}/${acento.id}';
+
+    test('contraste de $nome (mín. $minimo)', () {
+      final t = ativo(base.id, acento.id);
       final e = t.cores;
       final falhas = <String>[];
       void par(String nome, Color a, Color b, [double? min]) {
@@ -135,7 +106,9 @@ void main() {
       expect(falhas, isEmpty);
     });
 
-    test('coresCashew e temaFlutter de ${t.id}', () {
+    test('coresCashew e temaFlutter de $nome', () {
+      final t = ativo(base.id, acento.id);
+      expect(t.cores.acc, acento.doBrilho(t.brilho));
       final a = coresCashew(t);
       for (final k in _chaves) {
         expect(a.colors.containsKey(k), isTrue, reason: k);
@@ -154,6 +127,7 @@ void main() {
               th.colorScheme.tertiaryContainer),
           greaterThanOrEqualTo(4.5));
     });
+   }
   }
 
   test('temaAtivo', () {
@@ -162,18 +136,31 @@ void main() {
     expect(temaAtivo(Brightness.dark).id, 'padrao-escuro');
     appStateSettings.remove("temaPronto");
     expect(temaAtivo(Brightness.dark).id, 'padrao-escuro');
+    appStateSettings["temaPronto"] = "padrao-escuro";
+    expect(temaAtivo(Brightness.light).id, 'padrao-escuro');
+    // Tema antigo removido (um dos 18) segue o sistema.
     appStateSettings["temaPronto"] = "nord";
-    expect(temaAtivo(Brightness.light).id, 'nord');
-    expect(temaAtivo(Brightness.dark).id, 'nord');
+    expect(temaAtivo(Brightness.light).id, 'padrao-claro');
+    expect(temaAtivo(Brightness.dark).id, 'padrao-escuro');
+    expect(idTemaSalvo(), 'sistema');
     appStateSettings["temaPronto"] = "xyz";
     expect(temaAtivo(Brightness.light).id, 'padrao-claro');
     expect(temaAtivo(Brightness.dark).id, 'padrao-escuro');
   });
 
+  test('acento salvo, padrão verde e id inválido', () {
+    expect(temaAtivo(Brightness.light).cores.acc, acentos.first.claro);
+    appStateSettings["acento"] = "azul";
+    expect(temaAtivo(Brightness.dark).cores.acc, acentoPorId('azul').escuro);
+    appStateSettings["acento"] = "roxo";
+    expect(acentoSalvo().id, 'verde');
+  });
+
   test('modoDoTema', () {
     expect(modoDoTema('sistema'), ThemeMode.system);
-    expect(modoDoTema('nord'), ThemeMode.dark);
-    expect(modoDoTema('sepia-papel'), ThemeMode.light);
+    expect(modoDoTema('padrao-escuro'), ThemeMode.dark);
+    expect(modoDoTema('padrao-claro'), ThemeMode.light);
+    expect(modoDoTema('nord'), ThemeMode.system);
     expect(modoDoTema(null), ThemeMode.system);
     expect(modoDoTema('xyz'), ThemeMode.system);
   });

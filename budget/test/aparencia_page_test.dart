@@ -28,34 +28,52 @@ Future<void> _monta(WidgetTester t, String sel, ValueChanged<String> aoEscolher,
 }
 
 void main() {
-  testWidgets('mostra os 19 nomes e marca o selecionado', (t) async {
-    await _monta(t, 'nord', (_) {});
+  testWidgets('mostra os 3 modos e marca o selecionado', (t) async {
+    await _monta(t, 'padrao-escuro', (_) {});
     for (final tema in [temaSistema, ...temasProntos]) {
       expect(find.text(tema.nome), findsOneWidget, reason: tema.nome);
     }
     expect(
         t
-            .getSemantics(find.bySemanticsLabel('Nord'))
+            .getSemantics(find.bySemanticsLabel('Escuro'))
             .hasFlag(SemanticsFlag.isSelected),
         isTrue);
     expect(find.byIcon(Icons.check), findsOneWidget);
   });
 
-  testWidgets('tocar em Nord chama aoEscolher', (t) async {
+  testWidgets('tocar em Escuro chama aoEscolher', (t) async {
     String? id;
     await _monta(t, 'sistema', (v) => id = v);
-    await t.tap(find.text('Nord'));
-    expect(id, 'nord');
+    await t.tap(find.text('Escuro'));
+    expect(id, 'padrao-escuro');
   });
 
-  testWidgets('colunas: 2 abaixo de 600 px, 3 acima', (t) async {
-    await _monta(t, 'nord', (_) {});
-    final a = t.getTopLeft(find.text('Seguir o sistema')).dx;
-    final b = t.getTopLeft(find.text('Padrão claro')).dx;
-    expect(b, greaterThan(a));
-    expect(t.getTopLeft(find.text('Padrão escuro')).dx, a);
-    await _monta(t, 'nord', (_) {}, largura: 900);
-    final d = t.getTopLeft(find.text('Padrão escuro')).dx;
-    expect(d, greaterThan(t.getTopLeft(find.text('Padrão claro')).dx));
+  testWidgets('os 3 modos ficam na mesma linha', (t) async {
+    await _monta(t, 'sistema', (_) {});
+    final a = t.getTopLeft(find.text('Sistema'));
+    final b = t.getTopLeft(find.text('Claro'));
+    final c = t.getTopLeft(find.text('Escuro'));
+    expect(b.dx, greaterThan(a.dx));
+    expect(c.dx, greaterThan(b.dx));
+    expect((c.dy - a.dy).abs(), lessThan(4));
+  });
+
+  testWidgets('seletor de acento mostra 4 cores e escolhe', (t) async {
+    String? id;
+    await t.pumpWidget(MaterialApp(
+      theme: temaFlutter(temaPorId('padrao-claro')),
+      home: Scaffold(
+          body: SeletorAcento(selecionado: 'verde', aoEscolher: (v) => id = v)),
+    ));
+    for (final a in acentos) {
+      expect(find.text(a.nome), findsOneWidget);
+    }
+    expect(
+        t
+            .getSemantics(find.bySemanticsLabel('Verde'))
+            .hasFlag(SemanticsFlag.isSelected),
+        isTrue);
+    await t.tap(find.text('Terracota'));
+    expect(id, 'terracota');
   });
 }

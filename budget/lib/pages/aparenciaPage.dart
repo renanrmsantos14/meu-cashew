@@ -2,6 +2,7 @@ import 'package:budget/colors.dart';
 import 'package:budget/struct/editorial.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/struct/temas.dart';
+import 'package:budget/widgets/editorial/movimento.dart';
 import 'package:budget/widgets/framework/pageFramework.dart';
 import 'package:budget/widgets/util/checkWidgetLaunch.dart';
 import 'package:flutter/material.dart';
@@ -14,11 +15,12 @@ class AparenciaPage extends StatefulWidget {
 }
 
 class _AparenciaPageState extends State<AparenciaPage> {
-  Future<void> _escolher(String id) async {
-    await updateSettings("temaPronto", id, updateGlobalState: true);
-    await updateSettings(
-        "accentColor", toHexString(temaPorId(id).cores.acc),
-        updateGlobalState: true);
+  // Grava sem redesenhar e redesenha uma vez ao gravar "accentColor", que
+  // alimenta widgets herdados do Cashew (widget da tela inicial, gráficos).
+  Future<void> _salvar(String chave, String valor) async {
+    await updateSettings(chave, valor, updateGlobalState: false);
+    await updateSettings("accentColor", toHexString(acentoEmUso()),
+        updateGlobalState: true, forceGlobalStateUpdate: true);
     if (mounted) updateWidgetColorsAndText(context);
     if (mounted) setState(() {});
   }
@@ -35,10 +37,9 @@ class _AparenciaPageState extends State<AparenciaPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Tema", style: EdTexto.h2(context)),
+              Text("Modo", style: EdTexto.h2(context)),
               const SizedBox(height: 4),
-              Text(
-                  "Troca na hora e fica salvo. Alto contraste usa texto AAA (7:1).",
+              Text("Troca na hora e fica salvo.",
                   style: EdTexto.rotulo(context)),
             ],
           ),
@@ -47,11 +48,81 @@ class _AparenciaPageState extends State<AparenciaPage> {
           padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 24),
           child: GradeTemas(
             selecionado: idTemaSalvo(),
-            aoEscolher: _escolher,
+            aoEscolher: (id) => _salvar("temaPronto", id),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
+          child: Text("Cor de destaque", style: EdTexto.h2(context)),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 24),
+          child: SeletorAcento(
+            selecionado: acentoSalvo().id,
+            aoEscolher: (id) => _salvar("acento", id),
           ),
         ),
       ],
     );
+  }
+}
+
+class SeletorAcento extends StatelessWidget {
+  const SeletorAcento(
+      {super.key, required this.selecionado, required this.aoEscolher});
+  final String selecionado;
+  final ValueChanged<String> aoEscolher;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = cores(context);
+    final brilho = Theme.of(context).brightness;
+    return LayoutBuilder(builder: (context, box) {
+      final largura = (box.maxWidth - 8) / 2;
+      return Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final a in acentos)
+          SizedBox(
+            width: largura,
+            child: Semantics(
+              button: true,
+              selected: a.id == selecionado,
+              label: a.nome,
+              excludeSemantics: true,
+              onTap: () => aoEscolher(a.id),
+              child: ToqueEscala(
+                onTap: () => aoEscolher(a.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: curvaEditorial,
+                  height: 44,
+                  padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 14, 0),
+                  decoration: BoxDecoration(
+                    color: c.surf,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: a.id == selecionado ? c.tx : c.line,
+                        width: a.id == selecionado ? 1.5 : 1),
+                  ),
+                  child: Row(children: [
+                    Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                            color: a.doBrilho(brilho), shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(a.nome,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: EdTexto.h2(context).copyWith(color: c.tx)),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+      ]);
+    });
   }
 }
 
@@ -64,7 +135,7 @@ class GradeTemas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, box) {
-      final colunas = MediaQuery.sizeOf(context).width < 600 ? 2 : 3;
+      const colunas = 3;
       const espaco = 12.0;
       final largura = (box.maxWidth - espaco * (colunas - 1)) / colunas;
       return Wrap(
@@ -87,9 +158,7 @@ class GradeTemas extends StatelessWidget {
 
 class _CartaoTema extends StatelessWidget {
   const _CartaoTema(
-      {required this.tema,
-      required this.selecionado,
-      required this.aoTocar});
+      {required this.tema, required this.selecionado, required this.aoTocar});
   final TemaPronto tema;
   final bool selecionado;
   final VoidCallback aoTocar;
@@ -103,16 +172,14 @@ class _CartaoTema extends StatelessWidget {
       label: tema.nome,
       excludeSemantics: true,
       onTap: aoTocar,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: ToqueEscala(
         onTap: aoTocar,
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-                color: selecionado ? c.acc : c.line,
-                width: selecionado ? 2 : 1),
+                color: selecionado ? c.tx : c.line, width: selecionado ? 2 : 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +220,13 @@ class _Miniatura extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (tema.id != 'sistema') return _Desenho(tema.cores);
+    // A miniatura mostra a cor de destaque escolhida, não a padrão do modo.
+    final acento = acentoSalvo();
+    EditorialCores comAcento(EditorialCores c, Brightness b) =>
+        c.copyWith(acc: acento.doBrilho(b));
+    if (tema.id != 'sistema') {
+      return _Desenho(comAcento(tema.cores, tema.brilho));
+    }
     // Cada metade mostra um desenho completo (largura dobrada) cortado ao meio.
     Widget metade(EditorialCores c, AlignmentGeometry lado) => Expanded(
         child: ClipRect(
@@ -166,8 +239,10 @@ class _Miniatura extends StatelessWidget {
     return SizedBox(
       height: 76,
       child: Row(children: [
-        metade(EditorialCores.claro, AlignmentDirectional.centerStart),
-        metade(EditorialCores.escuro, AlignmentDirectional.centerEnd),
+        metade(comAcento(EditorialCores.claro, Brightness.light),
+            AlignmentDirectional.centerStart),
+        metade(comAcento(EditorialCores.escuro, Brightness.dark),
+            AlignmentDirectional.centerEnd),
       ]),
     );
   }
@@ -207,7 +282,8 @@ class _Desenho extends StatelessWidget {
           child: Container(
             color: c.surf,
             padding: const EdgeInsets.all(6),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Container(
                     width: 6,
@@ -215,7 +291,7 @@ class _Desenho extends StatelessWidget {
                     decoration:
                         BoxDecoration(color: c.acc, shape: BoxShape.circle)),
                 const SizedBox(width: 4),
-                _traco(c.tx, 28),
+                Flexible(child: _traco(c.tx, 28)),
               ]),
               _traco(c.mu, 36),
               Container(
@@ -237,7 +313,8 @@ class _Desenho extends StatelessWidget {
           child: Container(
             color: c.surf,
             padding: const EdgeInsets.all(6),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _traco(c.mu, 30),
               _traco(c.mu, 22),
               const Spacer(),

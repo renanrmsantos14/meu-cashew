@@ -48,11 +48,8 @@ void main() async {
   captureLogs(() async {
     WidgetsFlutterBinding.ensureInitialized();
     LicenseRegistry.addLicense(() async* {
-      for (final f in const ['OFL-Geist.txt', 'OFL-SourceSerif.txt']) {
-        yield LicenseEntryWithLineBreaks(
-            [f == 'OFL-Geist.txt' ? 'Geist' : 'Source Serif 4'],
-            await rootBundle.loadString('assets/fonts/$f'));
-      }
+      yield LicenseEntryWithLineBreaks(
+          ['Geist'], await rootBundle.loadString('assets/fonts/OFL-Geist.txt'));
     });
     // Independentes entre si: rodam juntas. Só initializeSettings precisa de
     // sharedPreferences e database, então espera os dois.
