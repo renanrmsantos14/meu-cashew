@@ -11,11 +11,15 @@ import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+// Nome antigo do repositório: segue funcionando depois do rename (a API do GitHub redireciona).
 const String atualizadorUrlLatest =
     "https://api.github.com/repos/renanrmsantos14/meu-cashew/releases/latest";
-// Único prefixo aceito para baixar o APK (o GitHub redireciona para o CDN; o redirect é seguido pelo http).
-const String _prefixoDownload =
-    "https://github.com/renanrmsantos14/meu-cashew/releases/download/";
+// Prefixos aceitos para baixar o APK (o GitHub redireciona para o CDN; o redirect é seguido pelo http).
+// Os dois nomes do repositório: depois do rename meu-cashew → renancash a API devolve links com o nome novo.
+const List<String> _prefixosDownload = [
+  "https://github.com/renanrmsantos14/renancash/releases/download/",
+  "https://github.com/renanrmsantos14/meu-cashew/releases/download/",
+];
 const int _tamanhoMaximoApk = 300 * 1024 * 1024;
 const String _chaveOferta = "atualizacaoOfertada";
 
@@ -52,7 +56,7 @@ bool atualizadorTagEhMaisNova(String tag, int buildAtual) {
 /// True só para APKs hospedados nas Releases deste repositório, via https.
 bool atualizadorUrlConfiavel(String url) {
   final uri = Uri.tryParse(url)?.normalizePath();
-  return uri != null && uri.toString().startsWith(_prefixoDownload);
+  return uri != null && _prefixosDownload.any(uri.toString().startsWith);
 }
 
 /// Consulta a última Release. Retorna null se não há versão mais nova.
