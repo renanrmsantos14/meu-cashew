@@ -100,8 +100,8 @@ void main() {
       home: Scaffold(body: InicioEditorial.comModelo(_montar())),
     ));
     await t.pump(const Duration(seconds: 2));
-    expect(find.text('Disponível agora'), findsOneWidget);
-    expect(find.text('CONTAS'), findsOneWidget);
+    expect(find.textContaining('Disponível agora'), findsOneWidget);
+    expect(find.text('Contas'), findsOneWidget);
     expect(find.text('Olá, Renan'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
@@ -122,7 +122,7 @@ void main() {
     ));
     await t.pump(const Duration(seconds: 2));
     expect(find.text('Ainda sem dados. Toque em Atualizar.'), findsOneWidget);
-    expect(find.text('Disponível agora'), findsNothing);
+    expect(find.textContaining('Disponível agora'), findsNothing);
     await t.pumpWidget(const SizedBox());
   });
   test('ModeloInicio: mesmo conteúdo é igual, saldo ou nome diferente não', () {

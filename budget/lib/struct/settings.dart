@@ -82,12 +82,7 @@ Future<bool> initializeSettings() async {
   // Material You e cor de destaque livre foram substituídos pelos temas prontos.
   appStateSettings["materialYou"] = false;
   appStateSettings["accentSystemColor"] = false;
-  appStateSettings["accentColor"] = toHexString(temaAtivo(
-          modoDoTema(appStateSettings["temaPronto"]) == ThemeMode.dark
-              ? Brightness.dark
-              : Brightness.light)
-      .cores
-      .acc);
+  appStateSettings["accentColor"] = toHexString(acentoEmUso());
   print(
       "App settings loaded: if logging is enabled, logs will now be captured");
 

@@ -89,12 +89,20 @@ class _InicioEditorialState extends State<InicioEditorial> {
             child: Text('Ainda sem dados. Toque em Atualizar.',
                 style: EdTexto.corpo(context).copyWith(color: e.mu)),
           )
-        else ...[
-          _Disponivel(modelo: m),
-          _GastoCiclo(modelo: m),
-        ],
+        else
+          _CartaoSaldo(modelo: m),
         if (m.contas.isNotEmpty) _Contas(contas: m.contas),
-        for (final c in m.cartoes) _Cartao(cartao: c),
+        if (m.cartoes.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Cartões', style: EdTexto.h2(context)),
+              for (final c in m.cartoes) ...[
+                const SizedBox(height: 14),
+                _Cartao(cartao: c),
+              ],
+            ],
+          ),
         if (m.ultimas.isNotEmpty)
           _Ultimas(
             itens: m.ultimas,
@@ -120,7 +128,7 @@ class _InicioEditorialState extends State<InicioEditorial> {
         child: m == null
             ? _Esqueleto(cor: e.line)
             : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
                 children: [
                   for (var i = 0; i < secoes.length; i++)
                     EntradaEditorial(
@@ -128,10 +136,8 @@ class _InicioEditorialState extends State<InicioEditorial> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (i > 0)
-                            Divider(height: 1, thickness: 1, color: e.line),
                           Padding(
-                            padding: EdgeInsets.symmetric(vertical: i == 0 ? 0 : 18),
+                            padding: EdgeInsets.only(top: i == 0 ? 0 : 24),
                             child: secoes[i],
                           ),
                         ],
@@ -146,7 +152,10 @@ class _InicioEditorialState extends State<InicioEditorial> {
 
 class _BotaoIcone extends StatelessWidget {
   const _BotaoIcone(
-      {required this.icone, required this.onTap, required this.rotulo, this.girar = false});
+      {required this.icone,
+      required this.onTap,
+      required this.rotulo,
+      this.girar = false});
   final IconData icone;
   final VoidCallback? onTap;
   final String rotulo;
@@ -169,7 +178,7 @@ class _BotaoIcone extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: e.surf,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: e.line),
               ),
               child: girar && !semMovimento(context)
@@ -242,25 +251,44 @@ class _Topo extends StatelessWidget {
   }
 }
 
+/// Cartão escuro de saldo: o único bloco pesado da tela, nos dois modos.
+class _CartaoSaldo extends StatelessWidget {
+  const _CartaoSaldo({required this.modelo});
+  final ModeloInicio modelo;
+
+  @override
+  Widget build(BuildContext context) {
+    return CartaoEscuro(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Disponivel(modelo: modelo),
+          const SizedBox(height: 20),
+          _GastoCiclo(modelo: modelo),
+        ],
+      ),
+    );
+  }
+}
+
 class _Disponivel extends StatelessWidget {
   const _Disponivel({required this.modelo});
   final ModeloInicio modelo;
 
   @override
   Widget build(BuildContext context) {
+    final origem = modelo.origemDisponivel;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Disponível agora', style: EdTexto.rotulo(context)),
+        Text(origem.isEmpty ? 'Disponível agora' : 'Disponível agora · $origem',
+            overflow: TextOverflow.ellipsis, style: EdTexto.rotulo(context)),
         const SizedBox(height: 8),
         ContagemValor(
             valor: modelo.disponivel,
             formatar: brl,
             estilo: EdTexto.numeroGrande(context)),
-        if (modelo.origemDisponivel.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(modelo.origemDisponivel, style: EdTexto.rotulo(context)),
-        ],
       ],
     );
   }
@@ -274,37 +302,44 @@ class _GastoCiclo extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = modelo;
     final limite = m.limite;
-    final pct = m.percentual ?? (limite != null ? m.consumido / limite * 100 : null);
+    final pct =
+        m.percentual ?? (limite != null ? m.consumido / limite * 100 : null);
+    final temLimite = limite != null && limite > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Gasto no ciclo', style: EdTexto.rotulo(context)),
-            Text(brl(m.consumido),
-                style: EdTexto.corpo(context)
-                    .copyWith(fontWeight: FontWeight.w600, fontSize: 15)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (limite != null && limite > 0) ...[
+        if (temLimite) ...[
           MedidorEditorial(
               fracao: m.consumido / limite, alerta: (pct ?? 0) >= 100),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('${(pct ?? 0).round()}% do previsto',
+          const SizedBox(height: 10),
+        ],
+        Row(
+          children: [
+            Text('Gasto no ciclo ', style: EdTexto.rotulo(context)),
+            // O valor nunca encolhe; quem corta com reticências é a dica.
+            Text(brl(m.consumido),
+                style: EdTexto.corpo(context)
+                    .copyWith(fontWeight: FontWeight.w500, fontSize: 13)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  temLimite
+                      ? '${(pct ?? 0).round()}% do previsto'
+                      : 'Defina o limite no painel',
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: EdTexto.rotulo(context)),
-              Text(
-                  '${m.diasRestantes} ${m.diasRestantes == 1 ? 'dia restante' : 'dias restantes'}',
-                  style: EdTexto.rotulo(context)),
-            ],
-          ),
-        ] else
-          Text('Defina o limite no painel', style: EdTexto.rotulo(context)),
-        const SizedBox(height: 14),
+            ),
+          ],
+        ),
+        if (temLimite) ...[
+          const SizedBox(height: 2),
+          Text(
+              '${m.diasRestantes} ${m.diasRestantes == 1 ? 'dia restante' : 'dias restantes'}',
+              style: EdTexto.rotulo(context)),
+        ],
+        const SizedBox(height: 16),
         BarrasDias(valores: m.porDia, indiceHoje: m.indiceHoje),
       ],
     );
@@ -321,7 +356,7 @@ class _Contas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('CONTAS', style: EdTexto.h2(context)),
+        Text('Contas', style: EdTexto.h2(context)),
         const SizedBox(height: 6),
         for (var i = 0; i < contas.length; i++) ...[
           if (i > 0) Divider(height: 1, thickness: 1, color: e.line),
@@ -330,17 +365,17 @@ class _Contas extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                      color: e.chip, borderRadius: BorderRadius.circular(6)),
+                      color: e.chip, borderRadius: BorderRadius.circular(10)),
                   child: Text(contas[i].sigla,
                       style: TextStyle(
-                          fontFamily: 'Geist',
+                          fontFamily: 'GeistMono',
                           fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: e.acc)),
+                          fontWeight: FontWeight.w600,
+                          color: e.tx)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -397,9 +432,9 @@ class _Cartao extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                      '${c.nome.toUpperCase()}${c.final4.isEmpty ? '' : ' ·${c.final4}'}',
-                      style: EdTexto.h2(context)),
+                  Text('${c.nome}${c.final4.isEmpty ? '' : ' ·${c.final4}'}',
+                      style: EdTexto.corpo(context)
+                          .copyWith(fontWeight: FontWeight.w500)),
                   if (linhaFecha.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(linhaFecha, style: EdTexto.rotulo(context)),
@@ -412,13 +447,13 @@ class _Cartao extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                     color: alto ? e.warnbg : e.chip,
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(10)),
                 child: Text('${pct.round()}%',
                     style: TextStyle(
-                        fontFamily: 'Geist',
+                        fontFamily: 'GeistMono',
                         fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: alto ? e.warntx : e.acc)),
+                        fontWeight: FontWeight.w600,
+                        color: alto ? e.warntx : e.tx)),
               ),
           ],
         ),
@@ -452,12 +487,11 @@ class _Ultimas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('ÚLTIMAS', style: EdTexto.h2(context)),
+        Text('Últimas', style: EdTexto.h2(context)),
         const SizedBox(height: 6),
         for (var i = 0; i < itens.length; i++) ...[
           if (i > 0) Divider(height: 1, thickness: 1, color: e.line),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          ToqueEscala(
             onTap: onTap == null ? null : () => onTap!(i),
             child: SizedBox(
               height: 56,
@@ -513,8 +547,11 @@ class _Esqueleto extends StatelessWidget {
             _bloco(120, 12),
             _bloco(180, 28),
             const SizedBox(height: 24),
-            _bloco(100, 12),
-            _bloco(260, 50),
+            Container(
+                height: 168,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                    color: cor, borderRadius: BorderRadius.circular(20))),
             const SizedBox(height: 24),
             _bloco(double.infinity, 40),
             const SizedBox(height: 12),

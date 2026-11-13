@@ -241,7 +241,7 @@ void main() {
     await t.pump();
     expect(find.byType(DetalheTransacao), findsOneWidget);
     expect(
-        find.text('ÚLTIMAS TRANSAÇÕES', skipOffstage: false), findsOneWidget);
+        find.text('Últimas transações', skipOffstage: false), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 

@@ -192,13 +192,13 @@ flutter:
           weight: 400
         - asset: assets/fonts/Geist-Medium.ttf
           weight: 500
+        - asset: assets/fonts/Geist-SemiBold.ttf
+          weight: 600
     - family: GeistMono
       fonts:
         - asset: assets/fonts/GeistMono-Regular.ttf
-    - family: SerifEditorial
-      fonts:
-        - asset: assets/fonts/SourceSerif4-It.ttf
-          style: italic
+        - asset: assets/fonts/GeistMono-SemiBold.ttf
+          weight: 600
     # Sem uma família "Roboto" declarada, o CanvasKit baixa a fonte de fonts.gstatic.com (bloqueado pela CSP do /app/)
     - family: Roboto
       fonts:

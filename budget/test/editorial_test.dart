@@ -40,17 +40,17 @@ void main() {
       c.pos,
       c.chip
     ], [
-      const Color(0xFFF7F6F3),
-      const Color(0xFFFBFBFA),
-      const Color(0xFF17181C),
-      const Color(0xFF6B6A6E),
-      const Color.fromRGBO(20, 20, 30, .08),
-      const Color(0xFF2340D8),
+      const Color(0xFFFFFFFF),
+      const Color(0xFFF6F6F5),
+      const Color(0xFF111111),
+      const Color(0xFF6E6E73),
+      const Color(0xFFEDEDED),
+      const Color(0xFF1F7A4C),
       const Color(0xFFB42318),
       const Color(0xFFFDEBEC),
       const Color(0xFF9F2F2D),
-      const Color(0xFF2F6B3A),
-      const Color(0xFFE8ECFB),
+      const Color(0xFF2F7A4A),
+      const Color(0xFFF2F2F1),
     ]);
     const d = EditorialCores.escuro;
     expect([
@@ -66,26 +66,26 @@ void main() {
       d.pos,
       d.chip
     ], [
-      const Color(0xFF0F1114),
-      const Color(0xFF15181C),
-      const Color(0xFFECEDEF),
-      const Color(0xFF8D9097),
-      const Color.fromRGBO(255, 255, 255, .08),
-      const Color(0xFF8EA4FF),
+      const Color(0xFF0B0B0C),
+      const Color(0xFF151516),
+      const Color(0xFFF2F2F2),
+      const Color(0xFF8E8E93),
+      const Color.fromRGBO(255, 255, 255, .07),
+      const Color(0xFF5CC783),
       const Color(0xFFF0726B),
       const Color.fromRGBO(240, 114, 107, .12),
       const Color(0xFFF59A94),
-      const Color(0xFF7FCB92),
-      const Color.fromRGBO(142, 164, 255, .12),
+      const Color(0xFF6FD394),
+      const Color(0xFF1C1C1E),
     ]);
   });
 
   test('temaEditorial carrega a extensão e o fundo certos', () {
     final escuro = temaEditorial(Brightness.dark);
-    expect(escuro.extension<EditorialCores>()!.acc, const Color(0xFF8EA4FF));
-    expect(escuro.scaffoldBackgroundColor, const Color(0xFF0F1114));
+    expect(escuro.extension<EditorialCores>()!.acc, const Color(0xFF5CC783));
+    expect(escuro.scaffoldBackgroundColor, const Color(0xFF0B0B0C));
     expect(temaEditorial(Brightness.light).scaffoldBackgroundColor,
-        const Color(0xFFF7F6F3));
+        const Color(0xFFFFFFFF));
   });
 
   testWidgets('EntradaEditorial sem movimento mostra o filho direto',

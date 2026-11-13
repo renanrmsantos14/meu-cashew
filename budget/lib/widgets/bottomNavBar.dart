@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:budget/widgets/editorial/movimento.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/pages/editBudgetPage.dart';
 import 'package:budget/pages/editHomePage.dart';
@@ -243,7 +244,7 @@ class BottomNavBarState extends State<BottomNavBar> {
     // Android navbar
     return Container(
       decoration: BoxDecoration(
-        boxShadow: boxShadowSharp(context),
+        border: Border(top: BorderSide(color: cores(context).line)),
       ),
       child: NavigationBarTheme(
         data: NavigationBarThemeData(
@@ -670,10 +671,10 @@ class _BarraEditorial extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: i == ativo,
-                child: InkResponse(
+                child: ToqueEscala(
                   onTap: () => aoTocar(i),
                   child: SizedBox(
-                    height: 56,
+                    height: 60,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -681,21 +682,17 @@ class _BarraEditorial extends StatelessWidget {
                             navBarIconsData[atalhos[i]]?.iconData ??
                                 Icons.circle_outlined,
                             size: 22,
-                            color: i == ativo ? e.acc : e.mu),
-                        const SizedBox(height: 3),
+                            color: i == ativo ? e.tx : e.mu),
+                        const SizedBox(height: 4),
                         Text(
                             _rotulosEditorial[atalhos[i]] ??
                                 (navBarIconsData[atalhos[i]]?.label ?? "").tr(),
                             style: TextStyle(
                                 fontFamily: 'Geist',
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                                color: i == ativo ? e.acc : e.mu)),
-                        const SizedBox(height: 3),
-                        Container(
-                            width: 24,
-                            height: 2,
-                            color: i == ativo ? e.acc : Colors.transparent),
+                                fontSize: 11,
+                                fontWeight:
+                                    i == ativo ? FontWeight.w600 : FontWeight.w500,
+                                color: i == ativo ? e.tx : e.mu)),
                       ],
                     ),
                   ),

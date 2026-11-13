@@ -127,7 +127,7 @@ class _LateralEditorialState extends State<LateralEditorial> {
                     if (_contas.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 24, 8, 8),
-                        child: Text('CONTAS', style: EdTexto.h2(context)),
+                        child: Text('Contas', style: EdTexto.h2(context)),
                       ),
                       for (final c in _contas)
                         _ItemNavegacao(

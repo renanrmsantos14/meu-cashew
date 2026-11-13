@@ -1,6 +1,6 @@
 ---
 name: verificar-editorial-web
-description: "Verifica o tema Editorial, a Início, o layout desktop, a versão visível e o build web em /app/. Use após mudar budget/lib/struct/editorial.dart, budget/lib/widgets/editorial, budget/lib/pages/homePage, bottomNavBar, navigationFramework, budget/web, pubspec ou scripts."
+description: "Verifica o tema Editorial (modos claro/escuro e 4 acentos), a tela Aparência, a Início, o layout desktop, a versão visível e o build web em /app/. Use após mudar budget/lib/struct/editorial.dart, budget/lib/struct/temas.dart, budget/lib/pages/aparenciaPage.dart, budget/lib/widgets/fab.dart, budget/lib/widgets/editorial, budget/lib/pages/homePage, bottomNavBar, navigationFramework, budget/web, pubspec ou scripts."
 ---
 # Verificar Editorial e web
 
@@ -8,20 +8,25 @@ description: "Verifica o tema Editorial, a Início, o layout desktop, a versão 
 - Código: `budget/lib/struct/editorial.dart`, `budget/lib/widgets/editorial/**`, `budget/lib/pages/homePage/**`, `bottomNavBar.dart`, `navigationFramework.dart`, `budget/web/**`, `scripts/**`.
 
 ## Preparar ambiente
-- `export PATH=$HOME/dev/flutter/bin:$PATH` e `cd budget`.
+- Nuvem/Linux: `export PATH=$HOME/dev/flutter/bin:$PATH`. Windows local: `export PATH=/c/Users/mendo/development/flutter-3.24.5/bin:$PATH` (mesma versão do CI). Depois `cd budget`.
+- No Git Bash, `--base-href /app/` vira caminho do Windows: use `MSYS_NO_PATHCONV=1 flutter build web --base-href /app/`.
 
 ## Roteiro
-1. `flutter test test/editorial_test.dart test/desktop_test.dart test/mb_inicio_test.dart test/versao_test.dart` → todos passam.
+1. `flutter test test/temas_test.dart test/temas_app_test.dart test/aparencia_page_test.dart test/editorial_test.dart test/desktop_test.dart test/mb_inicio_test.dart test/versao_test.dart` → todos passam (temas_test cobre contraste ≥ 4,5:1 de cada modo × acento).
 2. `flutter analyze` → 0 erros (o restante é aviso herdado do Cashew).
 3. `flutter build web --base-href /app/` → "Built build/web".
 4. `rg -c "gstatic|firebase" build/web/index.html` → 0 ocorrências (sem Firebase em tempo de execução).
-5. UI alterada: print do estado real (celular 390x844 e desktop 1440x900, claro e escuro) com `playwright-core` sobre `build/web` servido com `--base-href /app/`; a versão `vX.Y.Z · dd/mm/aaaa HH:mm` aparece sem cobrir conteúdo e sem capturar clique.
+5. UI alterada, sem app pareado: `PRINTS=1 flutter test test/prints_visual_test.dart --update-goldens` gera Início (claro/escuro × verde/terracota), painel desktop e Aparência com fontes reais em `.verificacao/prints/`. Abra os PNGs e confira cartão escuro de saldo, títulos em caixa normal, nada estourado.
+6. Com app pareado ou fluxo completo: print do estado real (celular 390x844 e desktop 1440x900, claro e escuro) com `playwright-core` sobre `build/web` servido com `--base-href /app/`; a versão `vX.Y.Z · dd/mm/aaaa HH:mm` aparece sem cobrir conteúdo e sem capturar clique.
 
 ## Casos de borda
+- Tema antigo salvo (um dos 18 removidos, ex.: `nord`) cai em Sistema sem crash; acento inválido cai em Verde.
+- Peso 600 da Geist/GeistMono precisa de arquivo próprio no pubspec (sem `style: italic` perdido); sem ele o texto sai em 500.
 - Início vazia e carregando; app não pareado mantém o fluxo original do Cashew; página empilhada no desktop mantém a versão visível.
 
 ## Evidência obrigatória
 - Tail dos testes e do build web; prints em `.verificacao/<data>-<branch>/`.
 
 ## Limites
+- `mb_sync_drift_test`, `mb_orcamentos_test`, `mb_revisao_test` e `perf_test` já falham na main nesta máquina (Windows, sincronização local); não são regressão de UI.
 - Sem aparelho Android aqui; widget e notificações ficam na `verificar-meu-banco`.

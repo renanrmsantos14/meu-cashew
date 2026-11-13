@@ -183,6 +183,8 @@ class _ToqueEscalaState extends State<ToqueEscala> {
   bool _pressionado = false;
 
   void _definir(bool v) {
+    // Sem onTap o item não é tocável: não encolhe ao pressionar.
+    if (v && widget.onTap == null) return;
     if (_pressionado != v) setState(() => _pressionado = v);
   }
 

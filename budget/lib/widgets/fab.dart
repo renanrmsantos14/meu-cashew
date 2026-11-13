@@ -36,8 +36,8 @@ class AddFAB extends StatelessWidget {
           : Icons.add_rounded,
       openPage: openPage,
       onTap: onTap,
-      fabSize: getIsFullScreen(context) == false ? 60 : 70,
-      borderRadius: getIsFullScreen(context) == false ? 18 : 22,
+      fabSize: getIsFullScreen(context) == false ? 56 : 64,
+      borderRadius: 16,
       onLongPress: () {
         openBottomSheet(
           context,
@@ -60,8 +60,8 @@ class FAB extends StatelessWidget {
     this.color,
     this.colorIcon,
     this.iconData,
-    this.fabSize = 60,
-    this.borderRadius = 18,
+    this.fabSize = 56,
+    this.borderRadius = 16,
     this.label,
     this.labelSize = 18,
     this.isOutlined = false,
@@ -82,34 +82,20 @@ class FAB extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     Color? containerColor = color != null
         ? color
         : isOutlined
-            ? Theme.of(context).colorScheme.onSecondary
-            : Theme.of(context).colorScheme.secondary;
+            ? cs.surface
+            : cs.onSurface;
     Color? iconColor = color != null
         ? colorIcon
         : isOutlined
-            ? Theme.of(context).colorScheme.secondary
-            : Theme.of(context).colorScheme.onSecondary;
+            ? cs.onSurface
+            : cs.surface;
 
-    // Experiment with more vibrant FAB colors
-    // Color? containerColor = color != null
-    //     ? color
-    //     : isOutlined
-    //         ? Theme.of(context).colorScheme.onSecondary
-    //         : blend(Theme.of(context).colorScheme.secondary,
-    //             Theme.of(context).colorScheme.primary,
-    //             amount: 0.35);
-    // Color? iconColor = color != null
-    //     ? colorIcon
-    //     : isOutlined
-    //         ? Theme.of(context).colorScheme.secondary
-    //         : blend(Theme.of(context).colorScheme.onSecondary,
-    //             Theme.of(context).colorScheme.onPrimary,
-    //             amount: 0.35);
     return OpenContainerNavigation(
-      closedElevation: 10,
+      closedElevation: 0,
       borderRadius: borderRadius,
       closedColor: containerColor,
       button: (openContainer) {

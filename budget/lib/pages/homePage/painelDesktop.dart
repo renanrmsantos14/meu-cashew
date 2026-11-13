@@ -160,22 +160,20 @@ class _PainelDesktopState extends State<PainelDesktop> {
                   Text('Ainda sem dados. Use Atualizar.',
                       style: EdTexto.corpo(context).copyWith(color: e.mu))
                 else
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: _Disponivel(modelo: m)),
-                        Container(
-                            width: 1,
-                            margin: const EdgeInsets.symmetric(horizontal: 32),
-                            color: e.line),
-                        Expanded(child: _GastoCiclo(modelo: m)),
-                      ],
+                  CartaoEscuro(
+                    padding: const EdgeInsets.all(28),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: _Disponivel(modelo: m)),
+                          const _Separador(),
+                          Expanded(child: _GastoCiclo(modelo: m)),
+                        ],
+                      ),
                     ),
                   ),
-                const SizedBox(height: 32),
-                Divider(height: 1, thickness: 1, color: e.line),
-                const SizedBox(height: 24),
+                const SizedBox(height: 36),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -278,6 +276,16 @@ class _Topo extends StatelessWidget {
   }
 }
 
+class _Separador extends StatelessWidget {
+  const _Separador();
+
+  @override
+  Widget build(BuildContext context) => Container(
+      width: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 32),
+      color: cores(context).line);
+}
+
 class _Disponivel extends StatelessWidget {
   const _Disponivel({required this.modelo});
   final ModeloInicio modelo;
@@ -330,11 +338,11 @@ class _GastoCiclo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('GASTO NO CICLO', style: EdTexto.h2(context)),
+        Text('Gasto no ciclo', style: EdTexto.h2(context)),
         const SizedBox(height: 8),
         Text(brl(m.consumido),
             style: EdTexto.numeroGrande(context)
-                .copyWith(fontSize: 32, letterSpacing: -.045 * 32)),
+                .copyWith(fontSize: 32, letterSpacing: -.03 * 32)),
         const SizedBox(height: 14),
         if (limite != null && limite > 0) ...[
           MedidorEditorial(
@@ -383,10 +391,8 @@ class _Cartao extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(
-                  '${c.nome.toUpperCase()}${c.final4.isEmpty ? '' : ' ·${c.final4}'}',
-                  overflow: TextOverflow.ellipsis,
-                  style: EdTexto.h2(context)),
+              child: Text('${c.nome}${c.final4.isEmpty ? '' : ' ·${c.final4}'}',
+                  overflow: TextOverflow.ellipsis, style: EdTexto.h2(context)),
             ),
             if (pct != null)
               Container(
@@ -432,7 +438,7 @@ class _Tabela extends StatelessWidget {
         Row(
           children: [
             Expanded(
-                child: Text('ÚLTIMAS TRANSAÇÕES', style: EdTexto.h2(context))),
+                child: Text('Últimas transações', style: EdTexto.h2(context))),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => mbIrParaPagina(1),
@@ -558,7 +564,7 @@ class _Orcamentos extends StatelessWidget {
           height: 44,
           child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('ORÇAMENTOS', style: EdTexto.h2(context))),
+              child: Text('Orçamentos', style: EdTexto.h2(context))),
         ),
         if (itens.isEmpty)
           Text('Nenhum orçamento.', style: EdTexto.rotulo(context)),
