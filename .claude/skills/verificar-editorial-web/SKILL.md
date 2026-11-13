@@ -21,6 +21,9 @@ description: "Verifica o tema Editorial (modos claro/escuro e 4 acentos), a tela
 7. Com app pareado ou fluxo completo: print do estado real (celular 390x844 e desktop 1440x900, claro e escuro) com `playwright-core` sobre `build/web` servido com `--base-href /app/`; a versão `vX.Y.Z · dd/mm/aaaa HH:mm` aparece sem cobrir conteúdo e sem capturar clique.
 
 ## Casos de borda
+- Visual plano: `boxShadowGeneral`, `boxShadowSharp` e `boxShadowCategoryPercent` retornam vazio; cartões se separam por `surf` e borda.
+- Placeholder de lista vazia (`AddButton` com altura > 80) é uma linha compacta de 56 px com "+ Adicionar …"; empréstimos mostram "add-loan".
+- Orçamento sem dados não dá para criar pelo `shot.mjs` com estabilidade (o formulário depende de toques por coordenada); confira o cartão no app pareado ou com o modo demonstração do onboarding.
 - Cabeçalho de toda tela é compacto (56 px, título na linha do voltar); telas com subtítulo usam 110. Nada de faixa vazia no topo (preferência explícita do Renan).
 - Gasto em cor de texto com sinal −, renda em verde; orçamento estourado usa `overspentAmount` (vermelho).
 - Textos pt-BR em caixa de frase ("Selecione a categoria"), não "Cada Palavra Maiúscula".

@@ -1,8 +1,8 @@
+import 'package:budget/struct/editorial.dart';
 import 'package:budget/database/tables.dart';
 import 'package:budget/pages/sharedBudgetSettings.dart';
 import 'package:budget/pages/transactionFilters.dart';
 import 'package:budget/struct/currencyFunctions.dart';
-import 'package:budget/struct/defaultPreferences.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/animatedCircularProgress.dart';
 import 'package:budget/pages/addBudgetPage.dart';
@@ -18,14 +18,11 @@ import 'package:budget/widgets/tappable.dart';
 import 'package:budget/widgets/textWidgets.dart';
 import 'package:budget/widgets/util/widgetSize.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sa3_liquid/sa3_liquid.dart';
 import 'package:budget/colors.dart';
 import 'package:budget/functions.dart';
 import 'package:async/async.dart' show StreamZip;
-import 'package:budget/struct/randomConstants.dart';
 
 class BudgetContainer extends StatelessWidget {
   BudgetContainer({
@@ -86,15 +83,6 @@ class BudgetContainer extends StatelessWidget {
                 children: [
                   Stack(
                     children: [
-                      Positioned.fill(
-                        child: AnimatedGooBackground(
-                          randomOffset: budget.name.length,
-                          color: HexColor(budget.colour,
-                                  defaultColor:
-                                      Theme.of(context).colorScheme.primary)
-                              .withOpacity(0.8),
-                        ),
-                      ),
                       Padding(
                         padding: const EdgeInsetsDirectional.only(
                             start: 23, end: 23, bottom: 13, top: 13),
@@ -103,11 +91,25 @@ class BudgetContainer extends StatelessWidget {
                           children: [
                             Row(
                               children: [
+                                // A cor do orçamento vira um ponto ao lado do nome.
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  margin:
+                                      const EdgeInsetsDirectional.only(end: 8),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: HexColor(budget.colour,
+                                        defaultColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                  ),
+                                ),
                                 Flexible(
                                   child: TextFont(
                                     text: budget.name,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
                                     textAlign: TextAlign.start,
                                   ),
                                 ),
@@ -336,68 +338,34 @@ class BudgetContainer extends StatelessWidget {
         }
       },
     );
-    ColorScheme budgetColorScheme = ColorScheme.fromSeed(
-      seedColor: HexColor(budget.colour,
-          defaultColor: Theme.of(context).colorScheme.primary),
-      brightness: determineBrightnessTheme(context),
-    );
-    Color backgroundColor = appStateSettings["materialYou"]
-        ? budget.colour == null
-            ? appStateSettings["accentSystemColor"] == true &&
-                    appStateSettings["materialYou"] &&
-                    appStateSettings["batterySaver"] == false
-                ? dynamicPastel(
+    final Color backgroundColor = cores(context).surf;
+    return OpenContainerNavigation(
+      borderRadius: 20,
+      closedColor: backgroundColor,
+      button: (openContainer) {
+        return Tappable(
+          onTap: () {
+            openContainer();
+          },
+          onLongPress: longPressToEdit
+              ? () {
+                  pushRoute(
                     context,
-                    Theme.of(context).colorScheme.primary,
-                    amountDark: 0.85,
-                    amountLight: 0.96,
-                  )
-                : dynamicPastel(
-                    context, HexColor(appStateSettings["accentColor"]),
-                    amountDark: 0.8,
-                    amountLight: appStateSettings["batterySaver"] ? 0.8 : 0.92)
-            : dynamicPastel(
-                context,
-                budgetColorScheme.secondaryContainer,
-                amountDark: 0.6,
-                amountLight: 0.75,
-              )
-        : getColor(
-            context,
-            "lightDarkAccentHeavyLight",
-          );
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: boxShadowCheck(boxShadowGeneral(context)),
-      ),
-      child: OpenContainerNavigation(
-        borderRadius: 20,
-        closedColor: backgroundColor,
-        button: (openContainer) {
-          return Tappable(
-            onTap: () {
-              openContainer();
-            },
-            onLongPress: longPressToEdit
-                ? () {
-                    pushRoute(
-                      context,
-                      AddBudgetPage(
-                        budget: budget,
-                        routesToPopAfterDelete: RoutesToPopAfterDelete.One,
-                      ),
-                    );
-                  }
-                : null,
-            borderRadius: 20,
-            child: widget,
-            color: backgroundColor,
-          );
-        },
-        openPage: BudgetPage(
-          budgetPk: budget.budgetPk,
-          dateForRange: dateForRangeLocal,
-        ),
+                    AddBudgetPage(
+                      budget: budget,
+                      routesToPopAfterDelete: RoutesToPopAfterDelete.One,
+                    ),
+                  );
+                }
+              : null,
+          borderRadius: 20,
+          child: widget,
+          color: backgroundColor,
+        );
+      },
+      openPage: BudgetPage(
+        budgetPk: budget.budgetPk,
+        dateForRange: dateForRangeLocal,
       ),
     );
   }
@@ -508,61 +476,6 @@ String getAmountPerDayString(
       "day".tr() +
       " " +
       remainingDaysString;
-}
-
-class AnimatedGooBackground extends StatelessWidget {
-  const AnimatedGooBackground({
-    Key? key,
-    required this.color,
-    this.randomOffset = 1,
-  });
-
-  final Color color;
-  final int randomOffset;
-
-  @override
-  Widget build(BuildContext context) {
-    if (appStateSettings["batterySaver"] ||
-        kIsWeb ||
-        (getPlatform() == PlatformOS.isIOS &&
-            appStateSettings["iOSAnimatedGoo"] != true) ||
-        appStateSettings["appAnimations"] != AppAnimations.all.index) {
-      return Container(
-        decoration: BoxDecoration(
-          color:
-              dynamicPastel(context, color, amountLight: 0.6, amountDark: 0.3),
-        ),
-      );
-    }
-    // Transform slightly to remove graphic artifacts
-    return Transform(
-      transform: Matrix4.skewX(0.001),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(200),
-        ),
-        child: PlasmaRenderer(
-          key: ValueKey(key),
-          type: PlasmaType.infinity,
-          particles: 10,
-          color: Theme.of(context).brightness == Brightness.light
-              ? this.color.withOpacity(0.1)
-              : this.color.withOpacity(0.3),
-          blur: 0.3,
-          size: 1.3,
-          speed: 3.3,
-          offset: 0,
-          blendMode: BlendMode.multiply,
-          particleType: ParticleType.atlas,
-          variation1: 0,
-          variation2: 0,
-          variation3: 0,
-          rotation:
-              (randomInt[0] % (randomOffset > 0 ? randomOffset : 1)).toDouble(),
-        ),
-      ),
-    );
-  }
 }
 
 class BudgetTimeline extends StatelessWidget {

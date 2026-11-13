@@ -1,5 +1,5 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:budget/colors.dart';
+import 'package:budget/struct/editorial.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/openBottomSheet.dart';
@@ -26,9 +26,7 @@ class SlidingSelectorIncomeExpense extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    BorderRadius borderRadius = getPlatform() == PlatformOS.isIOS
-        ? BorderRadius.circular(10)
-        : BorderRadius.circular(15);
+    final e = cores(context);
     return Padding(
       padding: EdgeInsetsDirectional.symmetric(
           horizontal: useHorizontalPaddingConstrained == false
@@ -39,45 +37,79 @@ class SlidingSelectorIncomeExpense extends StatelessWidget {
             (alternateTheme
                 ? const EdgeInsetsDirectional.symmetric(horizontal: 20)
                 : const EdgeInsetsDirectional.symmetric(horizontal: 13)),
-        child: Container(
-          decoration: BoxDecoration(
-            boxShadow: appStateSettings["materialYou"]
-                ? []
-                : boxShadowCheck(
-                    boxShadowGeneral(context),
-                  ),
-          ),
-          child: DefaultTabController(
-            length: options != null ? options!.length : 3,
-            initialIndex: initialIndex ?? 0,
-            child: SizedBox(
-              height: alternateTheme ? 40 : 45,
-              child: Material(
-                borderRadius: borderRadius,
-                color: appStateSettings["materialYou"]
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                    : getColor(context, "lightDarkAccentHeavyLight"),
-                child: TabBar(
-                  splashFactory: getPlatform() == PlatformOS.isIOS
-                      ? NoSplash.splashFactory
-                      : null,
-                  splashBorderRadius: borderRadius,
-                  onTap: (value) {
-                    onSelected(value + 1);
-                  },
-                  dividerColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: appStateSettings["materialYou"]
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-                        : getColor(context, "black").withOpacity(0.15),
-                    borderRadius: borderRadius,
-                  ),
-                  labelColor: getColor(context, "black"),
-                  unselectedLabelColor: getColor(context, "textLight"),
-                  tabs: options == null
-                      ? [
+        child: DefaultTabController(
+          length: options != null ? options!.length : 3,
+          initialIndex: initialIndex ?? 0,
+          child: SizedBox(
+            height: alternateTheme ? 40 : 45,
+            child: Material(
+              borderRadius: BorderRadius.circular(14),
+              color: e.surf,
+              child: TabBar(
+                padding: const EdgeInsets.all(4),
+                splashFactory: getPlatform() == PlatformOS.isIOS
+                    ? NoSplash.splashFactory
+                    : null,
+                splashBorderRadius: BorderRadius.circular(10),
+                onTap: (value) {
+                  onSelected(value + 1);
+                },
+                dividerColor: Colors.transparent,
+                indicatorColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: indicadorSegmento(e),
+                labelColor: e.tx,
+                unselectedLabelColor: e.mu,
+                tabs: options == null
+                    ? [
+                        Tab(
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(top: 5.0),
+                            child: AutoSizeText(
+                              minFontSize: 11,
+                              maxLines: 1,
+                              "all".tr(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: appStateSettings["font"],
+                                fontFamilyFallback: ['Inter'],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Tab(
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(top: 5.0),
+                            child: AutoSizeText(
+                              minFontSize: 11,
+                              maxLines: 1,
+                              "expense".tr(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: appStateSettings["font"],
+                                fontFamilyFallback: ['Inter'],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Tab(
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(top: 5.0),
+                            child: AutoSizeText(
+                              minFontSize: 11,
+                              maxLines: 1,
+                              "income".tr(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: appStateSettings["font"],
+                                fontFamilyFallback: ['Inter'],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ]
+                    : [
+                        for (String option in options!)
                           Tab(
                             child: Padding(
                               padding:
@@ -85,7 +117,7 @@ class SlidingSelectorIncomeExpense extends StatelessWidget {
                               child: AutoSizeText(
                                 minFontSize: 11,
                                 maxLines: 1,
-                                "all".tr(),
+                                option.tr(),
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontFamily: appStateSettings["font"],
@@ -94,59 +126,7 @@ class SlidingSelectorIncomeExpense extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Tab(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsetsDirectional.only(top: 5.0),
-                              child: AutoSizeText(
-                                minFontSize: 11,
-                                maxLines: 1,
-                                "expense".tr(),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontFamily: appStateSettings["font"],
-                                  fontFamilyFallback: ['Inter'],
-                                ),
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsetsDirectional.only(top: 5.0),
-                              child: AutoSizeText(
-                                minFontSize: 11,
-                                maxLines: 1,
-                                "income".tr(),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontFamily: appStateSettings["font"],
-                                  fontFamilyFallback: ['Inter'],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ]
-                      : [
-                          for (String option in options!)
-                            Tab(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsetsDirectional.only(top: 5.0),
-                                child: AutoSizeText(
-                                  minFontSize: 11,
-                                  maxLines: 1,
-                                  option.tr(),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontFamily: appStateSettings["font"],
-                                    fontFamilyFallback: ['Inter'],
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                ),
+                      ],
               ),
             ),
           ),
