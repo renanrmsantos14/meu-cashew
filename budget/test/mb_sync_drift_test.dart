@@ -86,7 +86,7 @@ void main() {
     expect(ok, true, reason: meuBancoUltimoErro.value);
   }
 
-  test('categoria criada no Cashew vai no push com id cashew:<pk>', () async {
+  test('categoria criada no RenanCash vai no push com id cashew:<pk>', () async {
     await _categoria('c1', 'Mercado');
     await sync();
     final r = _semCatsMb(cliente.enviados).singleWhere((r) => r.tabela == 'categorias');
@@ -356,7 +356,7 @@ void main() {
       expect(await progresso('m1'), 1700.5);
       final porPk = {for (final t in await _txs()) t.transactionPk: t.objectiveFk};
       expect(porPk['mb:inv:i3'], isNull);
-      // Meta de poupança (income): o tile do Cashew mostra o progresso positivo.
+      // Meta de poupança (income): o tile do RenanCash mostra o progresso positivo.
       expect((await (database.select(database.objectives)..where((o) => o.objectivePk.equals('m1'))).getSingle()).income, isTrue);
       expect(await mbLerAplicado(), isEmpty);
       expect(cliente.enviados.where((r) => r.tabela == 'ajustes'), isEmpty);
@@ -465,7 +465,7 @@ void main() {
     });
   });
 
-  test('trocar de conta apaga o espelho e o importado, e reenvia o que é do Cashew', () async {
+  test('trocar de conta apaga o espelho e o importado, e reenvia o que é do RenanCash', () async {
     await _categoria('c1', 'Mercado');
     cliente.extra = banco();
     await sync();

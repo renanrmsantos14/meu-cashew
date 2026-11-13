@@ -281,7 +281,7 @@ ModeloInicio montarModeloInicio({
 
 Object? _decodificar(String? s) => s == null ? null : jsonDecode(s);
 
-// Linhas mais recentes do Cashew para a seção ÚLTIMAS (ficam em paralelo com o modelo, para abrir no editor).
+// Linhas mais recentes do RenanCash para a seção ÚLTIMAS (ficam em paralelo com o modelo, para abrir no editor).
 JoinedSelectStatement<HasResultSet, dynamic> _consultaUltimas() =>
     database.select(database.transactions).join([
     innerJoin(database.categories,

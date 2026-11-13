@@ -198,7 +198,7 @@ Future<Projetado?> _orcamento(Registro r, Map<String, dynamic> d, DateTime hoje,
         order: Value(existente?.order ??
             await _contar(database.budgets)),
         walletFk: Value(existente?.walletFk ?? '0'),
-        // Sem filtros o Cashew somaria renda e ajuste de saldo no orçamento.
+        // Sem filtros o RenanCash somaria renda e ajuste de saldo no orçamento.
         budgetTransactionFilters: Value(existente?.budgetTransactionFilters ??
             [BudgetTransactionFilters.defaultBudgetTransactionFilters]),
         dateTimeModified: modificado,

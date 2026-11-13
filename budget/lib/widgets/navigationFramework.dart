@@ -366,7 +366,7 @@ Future<bool> runAllCloudFunctions(BuildContext context,
 class PageNavigationFrameworkState extends State<PageNavigationFramework> {
   final List<Widget> pages = [
     HomePage(key: homePageStateKey), // 0
-    // Computador: tabela com detalhe ao lado; celular: lista do Cashew.
+    // Computador: tabela com detalhe ao lado; celular: lista do RenanCash.
     Builder(
         builder: (context) => ehDesktop(context)
             ? const TransacoesDesktop()

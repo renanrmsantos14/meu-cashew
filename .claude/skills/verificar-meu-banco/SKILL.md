@@ -24,7 +24,7 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 - Remover conexão NÃO apaga as contas no servidor: elas ficam com saldo 0 e `removida = 1` no pull, porque as transações antigas dependem do tipo/banco (sinal do cartão, filtro do Santander). O app só as esconde da Início (`meuBancoSync.dart`). Faturas, investimentos e avisos da conexão somem; `DELETE` repetido devolve 200.
 - `precisaReconectar` vem do servidor (mesma regra `PROBLEMA` dos avisos); `OUTDATED` é falha temporária, não pede login.
 - Web (sessão por cookie) mostra Contas conectadas sem pareamento; conectar banco só pelo celular.
-- Troca de conta apaga espelho, fila, estado, `mb:` importado, carteiras e categorias `mb:` sem uso, e preserva o que nasceu no Cashew.
+- Troca de conta apaga espelho, fila, estado, `mb:` importado, carteiras e categorias `mb:` sem uso, e preserva o que nasceu no RenanCash.
 - Registro remoto mais velho não sobrescreve o espelho; exclusão local vira tombstone.
 - Token inválido (401) e limite de 30 min (429) mostram mensagem fixa em pt-BR.
 

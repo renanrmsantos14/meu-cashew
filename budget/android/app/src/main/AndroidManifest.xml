@@ -32,7 +32,7 @@
   </queries>
     <application
         android:requestLegacyExternalStorage="true"
-        android:label="Meu Cashew"
+        android:label="RenanCash"
         android:icon="@mipmap/ic_launcher">
         <!-- Use the new rendering engine Impeller (experimental) -->
         <!-- <meta-data

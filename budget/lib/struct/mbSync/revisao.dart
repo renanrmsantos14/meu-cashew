@@ -50,7 +50,7 @@ final RegExp _pixRecebido = RegExp(r'^PIX (RECEBID[OA]|RECEBIMENTO)\b ?');
 final RegExp _santander = RegExp(r'\bSANTANDER\b');
 const int _maxDestinatario = 60;
 
-/// Que pergunta a transação gera (ou null). `valor` no sinal do Cashew; só vale para conta (cartão não pergunta).
+/// Que pergunta a transação gera (ou null). `valor` no sinal do RenanCash; só vale para conta (cartão não pergunta).
 MbTipoRevisao? mbTipoDeRevisao(
     {required String descricao, required double valor, String? categoria}) {
   final d = mbNormalizarRevisao(descricao);

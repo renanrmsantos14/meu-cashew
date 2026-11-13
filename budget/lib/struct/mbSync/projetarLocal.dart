@@ -96,7 +96,7 @@ Projetado? mbProjRegra(
 // Na projeção eles precisam voltar ao id original, senão o objeto pareceria novo e o original, excluído.
 Set<String> mbIdsSemPrefixo(Iterable<Registro> registros) => {
       for (final r in registros)
-        if (!r.id.startsWith(prefixoCashew)) r.id
+        if (!r.id.startsWith(prefixoLocal)) r.id
     };
 
 String mbIdLocal(String pk, Set<String> semPrefixo) =>

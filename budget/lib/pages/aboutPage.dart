@@ -43,7 +43,7 @@ class AboutPageState extends State<AboutPage> {
             amountLight: 0.2, amountDark: 0.6)
         : getColor(context, "lightDarkAccent");
 
-    Widget cashewInformation = Wrap(
+    Widget renanCashInformation = Wrap(
       alignment: WrapAlignment.center,
       runAlignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -543,7 +543,7 @@ class AboutPageState extends State<AboutPage> {
                       Flexible(
                         child: Column(
                           children: [
-                            cashewInformation,
+                            renanCashInformation,
                             SizedBox(height: 15),
                             AboutLinks(containerColor: containerColor),
                             HorizontalBreak(
@@ -588,7 +588,7 @@ class AboutPageState extends State<AboutPage> {
               Padding(
                 padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 15, vertical: 7),
-                child: cashewInformation,
+                child: renanCashInformation,
               ),
               SizedBox(height: 5),
               AboutLinks(containerColor: containerColor),

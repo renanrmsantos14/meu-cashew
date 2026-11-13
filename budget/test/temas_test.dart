@@ -106,10 +106,10 @@ void main() {
       expect(falhas, isEmpty);
     });
 
-    test('coresCashew e temaFlutter de $nome', () {
+    test('coresRenanCash e temaFlutter de $nome', () {
       final t = ativo(base.id, acento.id);
       expect(t.cores.acc, acento.doBrilho(t.brilho));
-      final a = coresCashew(t);
+      final a = coresRenanCash(t);
       for (final k in _chaves) {
         expect(a.colors.containsKey(k), isTrue, reason: k);
         expect(a.colors[k], isNotNull, reason: k);

@@ -43,7 +43,7 @@ void main() {
       final p = await mbPedirToken('https://exemplo.test', 's3nha',
           cliente: resp(201, {'token': _t}, (r) {
         expect(r.url.toString(), 'https://exemplo.test/api/app/parear');
-        expect(jsonDecode(r.body), {'senha': 's3nha', 'nome': 'Cashew'});
+        expect(jsonDecode(r.body), {'senha': 's3nha', 'nome': 'RenanCash'});
       }));
       expect(p.base, 'https://exemplo.test');
       expect(p.token, _t);

@@ -29,7 +29,7 @@ const List<String> mbOrdemInicio = [
 ];
 
 // Duas colunas no computador. Esquerda: o que se olha primeiro e sempre cabe (orçamento padrão, fila, fatura,
-// patrimônio). Direita: o que cresce com o uso (metas, empréstimos, lista de transações), como a Início do Cashew.
+// patrimônio). Direita: o que cresce com o uso (metas, empréstimos, lista de transações), como a Início do RenanCash.
 const List<String> mbOrdemInicioTelaGrande = [
   "ORDER:LEFT",
   "orcamentoPadrao",

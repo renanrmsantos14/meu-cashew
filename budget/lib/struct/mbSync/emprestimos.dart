@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 // Empréstimos ao pai, derivados das decisões da fila "Para revisar" (tabela `revisoes`, sincronizada entre aparelhos):
 //   resposta "emprestimo" (envio do Inter ao Santander) abre um empréstimo com o valor da transação;
 //   resposta "devolucao" (Pix recebido) abate os empréstimos em aberto.
-// Não há registro próprio nem transação no Cashew: os envios classificados como empréstimo nem entram como gasto.
-// Reaproveitar os "objetivos de empréstimo" do Cashew exigiria criar um objetivo e transações vinculadas por empréstimo,
+// Não há registro próprio nem transação no RenanCash: os envios classificados como empréstimo nem entram como gasto.
+// Reaproveitar os "objetivos de empréstimo" do RenanCash exigiria criar um objetivo e transações vinculadas por empréstimo,
 // que contariam em gastos, orçamentos e saldos das carteiras; derivar das decisões não altera nada disso.
 //
 // Regra de abatimento (FIFO por data): os eventos são processados em ordem cronológica (no mesmo dia o empréstimo vem

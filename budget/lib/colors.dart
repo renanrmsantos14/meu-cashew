@@ -20,7 +20,7 @@ AppColors getAppColors(
     {required Brightness brightness,
     required ThemeData themeData,
     required Color accentColor}) {
-  return coresCashew(temaAtivo(brightness));
+  return coresRenanCash(temaAtivo(brightness));
 }
 
 // Ensure you specify a shade, otherwise type will be of MaterialColor which can't be compared

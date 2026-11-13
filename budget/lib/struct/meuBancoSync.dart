@@ -188,7 +188,7 @@ Future<bool> sincronizarMeuBanco({MbCliente? clienteParaTeste}) async {
 
     final categorias = await database.select(database.categories).get();
     final locais = {for (final c in categorias) c.categoryPk};
-    // Categoria do Cashew com o mesmo nome e tipo é reutilizada em vez de criar outra "mb:cat:".
+    // Categoria do RenanCash com o mesmo nome e tipo é reutilizada em vez de criar outra "mb:cat:".
     final porNome = {
       for (final c in categorias) '${c.income}:${c.name.toLowerCase()}': c.categoryPk
     };

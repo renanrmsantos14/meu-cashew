@@ -32,7 +32,7 @@ description: "Verifica o tema Editorial (modos claro/escuro e 4 acentos), a tela
 - Textos pt-BR em caixa de frase ("Selecione a categoria"), não "Cada Palavra Maiúscula".
 - Tema antigo salvo (um dos 18 removidos, ex.: `nord`) cai em Sistema sem crash; acento inválido cai em Verde.
 - Peso 600 da Geist/GeistMono precisa de arquivo próprio no pubspec (sem `style: italic` perdido); sem ele o texto sai em 500.
-- Início vazia e carregando; app não pareado mantém o fluxo original do Cashew; página empilhada no desktop mantém a versão visível.
+- Início vazia e carregando; app não pareado mantém o fluxo original do RenanCash; página empilhada no desktop mantém a versão visível.
 
 ## Evidência obrigatória
 - Tail dos testes e do build web; prints em `.verificacao/<data>-<branch>/`.
