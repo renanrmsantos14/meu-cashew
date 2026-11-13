@@ -1046,9 +1046,8 @@ Color calculateAppBarBGColor({
   required Color? appBarBackgroundColor,
   required bool centeredTitleSmall,
 }) {
-  Color appBarBGColorCalculated = appBarBackgroundColor == null
-      ? Theme.of(context).colorScheme.secondaryContainer
-      : appBarBackgroundColor;
+  Color appBarBGColorCalculated =
+      appBarBackgroundColor ?? Theme.of(context).colorScheme.surface;
   if (centeredTitleSmall && getPlatform() == PlatformOS.isIOS) {
     appBarBGColorCalculated =
         appBarBackgroundColor ?? Theme.of(context).colorScheme.background;
@@ -1303,34 +1302,11 @@ bool getCenteredTitleSmall(
   return false;
 }
 
+// Cabeçalho compacto em todas as telas: título na mesma linha do voltar,
+// sem a área expandida vazia acima do título.
 double getExpandedHeaderHeight(
     BuildContext context, double? expandedHeightPassed,
     {bool? isHomePageSpace}) {
   if (expandedHeightPassed != null) return expandedHeightPassed;
-  double height = MediaQuery.sizeOf(context).height;
-
-  double minHeaderHeight = getPlatform() == PlatformOS.isIOS
-      ? isHomePageSpace == true
-          ? 0
-          : 100
-      : 110;
-  double maxHeaderHeight = getPlatform() == PlatformOS.isIOS
-      ? isHomePageSpace == true
-          ? 0
-          : 100
-      : 200;
-
-  if (height >= MAX_HEIGHT_FOR_HEADER &&
-      appStateSettings["forceSmallHeader"] != true) {
-    return maxHeaderHeight;
-  } else if (height <= MIN_HEIGHT_FOR_HEADER ||
-      appStateSettings["forceSmallHeader"] == true) {
-    return minHeaderHeight;
-  } else {
-    double heightPercentage = (height - MIN_HEIGHT_FOR_HEADER) /
-        (MAX_HEIGHT_FOR_HEADER - MIN_HEIGHT_FOR_HEADER);
-    double expandedHeaderHeight = minHeaderHeight +
-        heightPercentage * (maxHeaderHeight - minHeaderHeight);
-    return expandedHeaderHeight;
-  }
+  return isHomePageSpace == true ? 0 : 56;
 }

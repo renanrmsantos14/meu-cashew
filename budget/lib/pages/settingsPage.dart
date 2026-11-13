@@ -583,7 +583,6 @@ class MoreOptionsPagePreferences extends StatelessWidget {
       horizontalPaddingConstrained: true,
       listWidgets: [
         SettingsHeader(title: "style".tr()),
-        HeaderHeightSetting(),
         OutlinedIconsSetting(),
         FontPickerSetting(),
         AppAnimationSetting(),
@@ -788,47 +787,6 @@ class _BiometricsSettingToggleState extends State<BiometricsSettingToggle> {
   }
 }
 
-class HeaderHeightSetting extends StatelessWidget {
-  const HeaderHeightSetting({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedExpanded(
-      // Indicates if it is enabled by default per device height
-      expand: MediaQuery.sizeOf(context).height > MIN_HEIGHT_FOR_HEADER &&
-          getPlatform() != PlatformOS.isIOS,
-      child: SettingsContainerDropdown(
-        title: "header-height".tr(),
-        icon: appStateSettings["outlinedIcons"]
-            ? Icons.subtitles_outlined
-            : Icons.subtitles_rounded,
-        initial: appStateSettings["forceSmallHeader"].toString(),
-        items: ["true", "false"],
-        onChanged: (value) async {
-          bool boolValue = false;
-          if (value == "true") {
-            boolValue = true;
-          } else if (value == "false") {
-            boolValue = false;
-          }
-          await updateSettings(
-            "forceSmallHeader",
-            boolValue,
-            updateGlobalState: false,
-            setStateAllPageFrameworks: true,
-            pagesNeedingRefresh: [0],
-          );
-        },
-        getLabel: (item) {
-          if (item == "true") return "short".tr();
-          if (item == "false") return "tall".tr();
-        },
-      ),
-    );
-  }
-}
-
-// Changing this setting needs to update the UI, that's not something that happens when setting global state
 class OutlinedIconsSetting extends StatelessWidget {
   const OutlinedIconsSetting({super.key});
 

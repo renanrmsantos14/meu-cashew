@@ -120,9 +120,9 @@ class HomePageWelcomeBannerSmall extends StatelessWidget {
         child: TextFont(
           text:
               showGreeting && showUsername ? getWelcomeMessage() : "home".tr(),
-          fontWeight: FontWeight.bold,
-          fontSize: getIsFullScreen(context) ? 26 : 30,
-          textColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          fontWeight: FontWeight.w600,
+          fontSize: 24,
+          textColor: Theme.of(context).colorScheme.onSurface,
           //textColor: Theme.of(context).colorScheme.onSecondaryContainer,
         ),
       ),
