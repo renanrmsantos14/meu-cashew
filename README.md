@@ -14,7 +14,7 @@ RenanCash é um app de finanças pessoais com sincronização do Meu Banco. É u
 
 O RenanCash é distribuído por GitHub Releases, não pela Play Store.
 
-- Primeira instalação: baixe o `.apk` mais recente em [Releases](https://github.com/renanrmsantos14/meu-cashew/releases/latest) e instale manualmente (permita "instalar apps desconhecidos" para o navegador/gerenciador de arquivos).
+- Primeira instalação: baixe o `.apk` mais recente em [Releases](https://github.com/renanrmsantos14/renancash/releases/latest) e instale manualmente (permita "instalar apps desconhecidos" para o navegador/gerenciador de arquivos).
 - Depois disso o app avisa quando houver versão nova ao abrir, e há o botão "Procurar atualização" em Configurações > Meu Banco.
 - Publicar versão: automático. Cada merge na `main` que mexe em `budget/` incrementa PATCH e build (commit `Versão X [skip ci]` do bot), cria a tag, publica a Release com o APK assinado e pede ao meu-banco para republicar o web. Para mudar MAJOR/MINOR, rode `scripts/nova-versao.sh 5.5.0+430` no PR; o merge publica essa versão.
 - Compilar localmente: `scripts/compilar.sh apk|apk-debug|web <destino>`; grava data/hora (America/Sao_Paulo) no build e o app mostra `vX.Y.Z · dd/mm/aaaa HH:mm` no canto de todas as telas.

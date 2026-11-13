@@ -11,9 +11,9 @@ import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
-// Nome antigo do repositório: segue funcionando depois do rename (a API do GitHub redireciona).
+// O prefixo meu-cashew abaixo fica para links antigos (o GitHub redireciona o nome anterior).
 const String atualizadorUrlLatest =
-    "https://api.github.com/repos/renanrmsantos14/meu-cashew/releases/latest";
+    "https://api.github.com/repos/renanrmsantos14/renancash/releases/latest";
 // Prefixos aceitos para baixar o APK (o GitHub redireciona para o CDN; o redirect é seguido pelo http).
 // Os dois nomes do repositório: depois do rename meu-cashew → renancash a API devolve links com o nome novo.
 const List<String> _prefixosDownload = [
