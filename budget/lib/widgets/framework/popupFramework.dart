@@ -178,26 +178,13 @@ class PopupFramework extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (outsideExtraWidget != null)
-                Transform.translate(
-                  offset: Offset(
-                      (getIsFullScreen(context) || showCloseButton) ? 20 : 0,
-                      0),
-                  child: outsideExtraWidget!,
-                ),
+              if (outsideExtraWidget != null) outsideExtraWidget!,
               if (getIsFullScreen(context) || showCloseButton)
-                IconButton(
-                  iconSize: 25,
-                  padding: EdgeInsetsDirectional.all(
-                      getPlatform() == PlatformOS.isIOS ? 15 : 20),
-                  icon: Icon(
-                    appStateSettings["outlinedIcons"]
-                        ? Icons.close_outlined
-                        : Icons.close_rounded,
-                  ),
-                  onPressed: () {
-                    popRoute(context);
-                  },
+                OutsideExtraWidgetIconButton(
+                  iconData: appStateSettings["outlinedIcons"]
+                      ? Icons.close_outlined
+                      : Icons.close_rounded,
+                  onPressed: () => popRoute(context),
                 ),
             ],
           ),
@@ -220,12 +207,17 @@ class OutsideExtraWidgetIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      iconSize: 25,
-      padding: EdgeInsetsDirectional.all(
-          getPlatform() == PlatformOS.isIOS ? 15 : 20),
-      icon: customIconWidget ?? Icon(iconData),
-      onPressed: onPressed,
+    // 44 px e afastado da borda: o destaque de toque/hover fica dentro do painel,
+    // alinhado ao título.
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(top: 12, end: 12),
+      child: IconButton(
+        iconSize: 22,
+        padding: const EdgeInsetsDirectional.all(11),
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        icon: customIconWidget ?? Icon(iconData),
+        onPressed: onPressed,
+      ),
     );
   }
 }

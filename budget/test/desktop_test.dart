@@ -12,6 +12,7 @@ import 'package:budget/widgets/editorial/lateralEditorial.dart';
 import 'package:budget/widgets/editorial/layoutDesktop.dart';
 import 'package:budget/widgets/navigationFramework.dart' show navigatorKey;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,7 +27,7 @@ Future<DetalheModelo?> _detalhe(String pk) async => DetalheModelo(
     );
 
 Future<void> _montar(WidgetTester t, Size tamanho,
-    {Future<void> Function(DetalheModelo)? aoMudar}) async {
+    {Future<void> Function(DetalheModelo)? aoMudar, Widget? conteudo}) async {
   t.view.physicalSize = tamanho;
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
@@ -39,7 +40,8 @@ Future<void> _montar(WidgetTester t, Size tamanho,
       builder: (context) => ehDesktop(context)
           ? LayoutDesktop(
               lateral: const LateralEditorial.comDados(contas: []),
-              conteudo: const Focus(autofocus: true, child: SizedBox.expand()),
+              conteudo: conteudo ??
+                  const Focus(autofocus: true, child: SizedBox.expand()),
               carregarDetalhe: _detalhe,
               aoMudarCategoria: aoMudar,
             )
@@ -92,6 +94,34 @@ void main() {
                 .first)
             .width,
         mbLarguraLateral);
+  });
+
+  testWidgets('itens da lateral são botões acessíveis com nome', (t) async {
+    final semantica = t.ensureSemantics();
+    await _montar(t, const Size(1280, 800));
+    for (final nome in ['Início', 'Transações', 'Orçamentos', 'Metas']) {
+      final no = t.getSemantics(find.bySemanticsLabel(nome));
+      expect(no.hasFlag(SemanticsFlag.isButton), isTrue, reason: nome);
+      expect(no.getSemanticsData().hasAction(SemanticsAction.tap), isTrue,
+          reason: nome);
+    }
+    semantica.dispose();
+  });
+
+  testWidgets('rota empilhada no conteúdo não esconde a lateral do leitor',
+      (t) async {
+    final semantica = t.ensureSemantics();
+    final nav = GlobalKey<NavigatorState>();
+    await _montar(t, const Size(1280, 800),
+        conteudo: Navigator(
+            key: nav,
+            onGenerateRoute: (_) =>
+                MaterialPageRoute(builder: (_) => const SizedBox.expand())));
+    nav.currentState!
+        .push(MaterialPageRoute(builder: (_) => const SizedBox.expand()));
+    await t.pumpAndSettle();
+    expect(find.bySemanticsLabel('Transações'), findsOneWidget);
+    semantica.dispose();
   });
 
   testWidgets('selecionar transação abre detalhe de 360', (t) async {
