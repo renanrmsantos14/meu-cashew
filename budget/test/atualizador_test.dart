@@ -33,4 +33,19 @@ void main() {
         isFalse);
     expect(atualizadorUrlConfiavel('${base}../../../evil/a.apk'), isFalse);
   });
+
+  test('aceita o nome novo do repositório (renancash) e o antigo', () {
+    expect(
+        atualizadorUrlConfiavel(
+            'https://github.com/renanrmsantos14/renancash/releases/download/v5.4.17+431/renancash-5.4.17+431.apk'),
+        isTrue);
+    expect(
+        atualizadorUrlConfiavel(
+            'https://github.com/renanrmsantos14/renancash/releases/download/../../outro/a.apk'),
+        isFalse);
+    expect(
+        atualizadorUrlConfiavel(
+            'https://github.com/outro/renancash/releases/download/v1/a.apk'),
+        isFalse);
+  });
 }
