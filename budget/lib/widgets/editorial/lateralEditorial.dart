@@ -11,6 +11,7 @@ import 'package:budget/struct/navBarIconsData.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/editorial/layoutDesktop.dart';
 import 'package:budget/widgets/editorial/versaoCanto.dart';
+import 'package:budget/widgets/editorial/painelTransacao.dart';
 import 'package:flutter/material.dart';
 import 'package:timer_builder/timer_builder.dart';
 
@@ -107,6 +108,15 @@ class _LateralEditorialState extends State<LateralEditorial> {
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
               child: Text('Meu Banco',
                   style: EdTexto.h1(context).copyWith(fontSize: 24)),
+            ),
+            // Substitui o botão flutuante do celular.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+              child: FilledButton.icon(
+                onPressed: () => abrirTransacao(context),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text('Nova transação'),
+              ),
             ),
             Expanded(
               child: ValueListenableBuilder<int>(
