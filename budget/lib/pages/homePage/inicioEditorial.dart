@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:budget/pages/addTransactionPage.dart';
+import 'package:budget/pages/meuBancoPage.dart';
 import 'package:budget/pages/settingsPage.dart';
 import 'package:budget/struct/editorial.dart';
 import 'package:budget/struct/mbSync/estadoInicio.dart';
@@ -91,7 +92,12 @@ class _InicioEditorialState extends State<InicioEditorial> {
           )
         else
           _CartaoSaldo(modelo: m),
-        if (m.contas.isNotEmpty) _Contas(contas: m.contas),
+        if (m.contas.isNotEmpty)
+          _Contas(
+              contas: m.contas,
+              onGerenciar: widget._modelo == null
+                  ? () => pushRoute(context, const MeuBancoPage())
+                  : null),
         if (m.cartoes.isNotEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,8 +353,9 @@ class _GastoCiclo extends StatelessWidget {
 }
 
 class _Contas extends StatelessWidget {
-  const _Contas({required this.contas});
+  const _Contas({required this.contas, this.onGerenciar});
   final List<ContaInicio> contas;
+  final VoidCallback? onGerenciar;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +363,17 @@ class _Contas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Contas', style: EdTexto.h2(context)),
+        Row(children: [
+          Expanded(child: Text('Contas', style: EdTexto.h2(context))),
+          if (onGerenciar != null)
+            TextButton(
+              onPressed: onGerenciar,
+              style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: e.mu),
+              child: const Text('Gerenciar'),
+            ),
+        ]),
         const SizedBox(height: 6),
         for (var i = 0; i < contas.length; i++) ...[
           if (i > 0) Divider(height: 1, thickness: 1, color: e.line),

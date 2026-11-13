@@ -98,10 +98,13 @@ class TransactionsAmountBox extends StatelessWidget {
                                       currencyKey: currencyKey,
                                       addCurrencyName: currencyKey != null,
                                       finalNumber: finalAmount),
-                                  textColor: getTextColor != null
-                                      ? getTextColor!(totalSpent)
-                                      : textColor,
-                                  fontWeight: FontWeight.bold,
+                                  // Zero não pede atenção: sem cor de alerta.
+                                  textColor: finalAmount == 0
+                                      ? getColor(context, "black")
+                                      : getTextColor != null
+                                          ? getTextColor!(totalSpent)
+                                          : textColor,
+                                  fontWeight: FontWeight.w600,
                                   textAlign: TextAlign.center,
                                   autoSizeText: true,
                                   fontSize: 21,

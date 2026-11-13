@@ -7,6 +7,8 @@ import 'dart:io';
 import 'package:budget/pages/aparenciaPage.dart';
 import 'package:budget/pages/homePage/inicioEditorial.dart';
 import 'package:budget/pages/homePage/painelDesktop.dart';
+import 'package:budget/pages/meuBancoConexoes.dart';
+import 'package:budget/struct/mbSync/conexoes.dart';
 import 'package:budget/struct/editorial.dart';
 import 'package:budget/struct/mbSync/estadoInicio.dart';
 import 'package:budget/struct/settings.dart';
@@ -165,6 +167,58 @@ void main() {
       await t.pump(const Duration(seconds: 3));
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile('../../.verificacao/prints/desktop_$modo.png'));
+    });
+  }
+
+  for (final modo in ['claro', 'escuro']) {
+    testWidgets('print contas conectadas $modo', skip: _pular, (t) async {
+      appStateSettings = {
+        'materialYou': false,
+        'accentSystemColor': false,
+        'batterySaver': false,
+        'increaseTextContrast': false,
+        'acento': 'verde',
+        'temaPronto': modo == 'claro' ? 'padrao-claro' : 'padrao-escuro',
+      };
+      t.view.physicalSize = const Size(390 * 2, 760 * 2);
+      t.view.devicePixelRatio = 2;
+      addTearDown(t.view.reset);
+      final b = modo == 'claro' ? Brightness.light : Brightness.dark;
+      MbConexao con(String id, String banco, String? status, List<Map<String, dynamic>> contas) =>
+          MbConexao.deJson({'id': id, 'banco': banco, 'status': status, 'precisaReconectar': status == 'LOGIN_ERROR', 'atualizado': DateTime.now().subtract(const Duration(minutes: 7)).toIso8601String(), 'contas': contas});
+      await t.pumpWidget(MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: temaFlutter(temaAtivo(b)),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text('Contas conectadas', style: EdTexto.h2(context)),
+                const SizedBox(height: 10),
+                ContasConectadas(
+                  carregar: () async => [
+                    con('a', 'Nubank', 'UPDATED', [
+                      {'type': 'BANK', 'subtype': 'CHECKING_ACCOUNT', 'name': 'Conta Nubank', 'balance': 3102.9},
+                      {'type': 'CREDIT', 'name': 'Ultravioleta', 'balance': 1240},
+                    ]),
+                    con('b', 'Banco Inter', 'LOGIN_ERROR', [
+                      {'type': 'BANK', 'subtype': 'CHECKING_ACCOUNT', 'name': 'Conta Inter', 'balance': 1115.5},
+                    ]),
+                    con('c', 'Itaú', null, []),
+                  ],
+                  remover: (_) async {},
+                  conectar: (c, {itemId}) async {},
+                  avisar: (_) {},
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ));
+      await t.pump(const Duration(seconds: 1));
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile('../../.verificacao/prints/contas_conectadas_$modo.png'));
     });
   }
 }

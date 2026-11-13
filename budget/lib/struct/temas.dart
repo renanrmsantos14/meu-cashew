@@ -193,6 +193,9 @@ ThemeData temaFlutter(TemaPronto t) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
+        // Botão principal na cor do texto, como o Button do app.
+        backgroundColor: e.tx,
+        foregroundColor: e.bg,
         minimumSize: const Size(64, 48),
         textStyle: const TextStyle(
             fontFamily: 'Geist', fontWeight: FontWeight.w600, fontSize: 15),

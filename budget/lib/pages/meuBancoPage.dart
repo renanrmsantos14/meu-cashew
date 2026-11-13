@@ -1,18 +1,17 @@
-import 'package:budget/pages/homePage/homePageConexaoCaida.dart';
+import 'package:budget/pages/meuBancoConexoes.dart';
 import 'package:budget/pages/meuBancoParear.dart';
 import 'package:budget/struct/atualizador.dart';
 import 'package:budget/struct/mbSync/armazem.dart';
 import 'package:budget/struct/mbSync/pareamento.dart';
-import 'package:budget/struct/mbSync/pluggy.dart';
+import 'package:budget/struct/editorial.dart';
+import 'package:budget/struct/mbSync/estadoInicio.dart';
 import 'package:budget/struct/meuBancoSync.dart';
 import 'package:budget/struct/settings.dart';
-import 'package:budget/widgets/button.dart';
 import 'package:budget/widgets/framework/pageFramework.dart';
 import 'package:budget/widgets/globalSnackbar.dart';
 import 'package:budget/functions.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/textInput.dart';
-import 'package:budget/widgets/textWidgets.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 
@@ -31,14 +30,11 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
   bool _atualizando = false;
   bool _procurandoAtualizacao = false;
   String? _msgAtualizacao;
-  List<Map<String, dynamic>> _avisos = [];
 
   @override
   void initState() {
     super.initState();
     _carregar();
-    _carregarAvisos();
-    meuBancoUltimaSync.addListener(_carregarAvisos);
     meuBancoAtualizarFila();
   }
 
@@ -52,14 +48,8 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     });
   }
 
-  Future<void> _carregarAvisos() async {
-    final avisos = await mbLerAvisos();
-    if (mounted) setState(() => _avisos = avisos);
-  }
-
   @override
   void dispose() {
-    meuBancoUltimaSync.removeListener(_carregarAvisos);
     _url.dispose();
     _token.dispose();
     super.dispose();
@@ -118,231 +108,218 @@ class _MeuBancoPageState extends State<MeuBancoPage> {
     });
   }
 
-  String _haQuanto(DateTime d) {
-    final min = DateTime.now().difference(d).inMinutes;
-    if (min < 1) return "Sincronizado agora há pouco";
-    if (min < 60) return "Sincronizado há $min min";
-    if (min < 1440) return "Sincronizado há ${min ~/ 60} h";
-    return "Sincronizado há ${min ~/ 1440} d";
+  Widget _secao(String titulo, List<Widget> filhos) => Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 24, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(titulo, style: EdTexto.h2(context)),
+            const SizedBox(height: 10),
+            ...filhos,
+          ],
+        ),
+      );
+
+  Widget _campos() => Column(children: [
+        TextInput(
+          labelText: "Endereço do Meu Banco",
+          controller: _url,
+          padding: EdgeInsetsDirectional.zero,
+          keyboardType: TextInputType.url,
+        ),
+        const SizedBox(height: 10),
+        TextInput(
+          labelText: _temToken
+              ? "Senha do painel ou token (para trocar)"
+              : "Senha do painel ou token",
+          controller: _token,
+          obscureText: true,
+          padding: EdgeInsetsDirectional.zero,
+        ),
+      ]);
+
+  Widget _parearQr() => OutlinedButton.icon(
+        onPressed: () async {
+          await pushRoute(context, const MeuBancoParearPage());
+          await _carregar();
+        },
+        icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+        label: const Text("Parear com QR"),
+      );
+
+  // Pareado: horário da última sincronização, fila e erro, com as duas ações principais.
+  Widget _status() {
+    final e = cores(context);
+    final host = Uri.tryParse(_url.text)?.host ?? _url.text;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: e.surf,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: e.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ValueListenableBuilder<String?>(
+            valueListenable: meuBancoUltimoErro,
+            builder: (context, erro, _) => Row(children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: erro == null ? e.pos : e.warn),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text("Pareado · $host",
+                    overflow: TextOverflow.ellipsis,
+                    style: EdTexto.corpo(context)
+                        .copyWith(fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 4),
+          ValueListenableBuilder<DateTime?>(
+            valueListenable: meuBancoUltimaSync,
+            builder: (context, ultima, _) => Text(
+                ultima == null
+                    ? "Ainda não sincronizado nesta sessão"
+                    : "Sincronizado ${haQuanto(ultima, DateTime.now())}",
+                style: EdTexto.rotulo(context)),
+          ),
+          ValueListenableBuilder<MbFila>(
+            valueListenable: meuBancoFila,
+            builder: (context, fila, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (fila.pendentes > 0)
+                  Text(
+                      fila.pendentes == 1
+                          ? "1 alteração aguardando envio"
+                          : "${fila.pendentes} alterações aguardando envio",
+                      style: EdTexto.rotulo(context)),
+                for (final r in fila.rejeitados)
+                  Text("Rejeitado: $r",
+                      style: EdTexto.rotulo(context).copyWith(color: e.warntx)),
+              ],
+            ),
+          ),
+          ValueListenableBuilder<String?>(
+            valueListenable: meuBancoUltimoErro,
+            builder: (context, erro, _) => erro == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(erro,
+                        style:
+                            EdTexto.rotulo(context).copyWith(color: e.warntx)),
+                  ),
+          ),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(
+              child: ValueListenableBuilder<bool>(
+                valueListenable: meuBancoSincronizando,
+                builder: (context, sincronizando, _) => FilledButton(
+                  onPressed: sincronizando ? null : sincronizarMeuBanco,
+                  child: Text(sincronizando ? "Sincronizando…" : "Sincronizar"),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _atualizando ? null : _atualizarAgora,
+                child: Text(_atualizando ? "Atualizando…" : "Atualizar bancos"),
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final e = cores(context);
     return PageFramework(
       dragDownToDismiss: true,
       title: "Meu Banco",
       listWidgets: [
-        Padding(
-          padding:
-              const EdgeInsetsDirectional.only(bottom: 5, start: 20, end: 20),
-          child: TextFont(
-            text:
-                "Importa as transações do Meu Banco para o Cashew. Para parear, digite a senha do painel e toque em Sincronizar agora. O acesso fica guardado de forma segura no aparelho e não entra nos backups.",
-            fontSize: 14,
-            maxLines: 10,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 5),
-          child: TextInput(
-            labelText: "Endereço do Meu Banco",
-            controller: _url,
-            padding: EdgeInsetsDirectional.zero,
-            keyboardType: TextInputType.url,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 5),
-          child: TextInput(
-            labelText: _temToken
-                ? "Pareado. Senha do painel ou token para trocar"
-                : "Senha do painel ou token",
-            controller: _token,
-            obscureText: true,
-            padding: EdgeInsetsDirectional.zero,
-          ),
-        ),
-        if (!kIsWeb)
+        // Web usa a sessão do painel (cookie): está sempre pareado e não tem pareamento a trocar.
+        if (_temToken || kIsWeb) ...[
           Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 5),
-            child: Button(
-              label: "Parear com QR",
-              expandedLayout: true,
-              onTap: () async {
-                await pushRoute(context, const MeuBancoParearPage());
-                await _carregar();
-              },
-            ),
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+            child: _status(),
           ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 5),
-          child: Button(
-            label: "Conectar banco",
-            expandedLayout: true,
-            onTap: () => mbAbrirConnect(context),
-          ),
-        ),
-        for (final aviso in _avisos)
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFont(
-                  text:
-                      "${aviso['banco'] ?? 'Conexão'}: ${aviso['mensagem'] ?? ''}",
-                  fontSize: 14,
-                  maxLines: 6,
-                ),
-                const SizedBox(height: 5),
-                Button(
-                  label: "Reconectar",
-                  expandedLayout: true,
-                  onTap: () => mbReconectarAviso(context, aviso),
-                ),
-              ],
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 5),
-          child: Button(
-            label: _atualizando ? "Atualizando..." : "Atualizar agora",
-            disabled: _atualizando,
-            expandedLayout: true,
-            onTap: _atualizarAgora,
-          ),
-        ),
-        ValueListenableBuilder<bool>(
-          valueListenable: meuBancoSincronizando,
-          builder: (context, sincronizando, _) => Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 10),
-            child: Button(
-              label: sincronizando ? "Sincronizando..." : "Sincronizar agora",
-              disabled: sincronizando,
-              expandedLayout: true,
-              onTap: _sincronizar,
-            ),
-          ),
-        ),
-        ValueListenableBuilder<DateTime?>(
-          valueListenable: meuBancoUltimaSync,
-          builder: (context, ultima, _) => Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 5),
-            child: TextFont(
-              text: ultima == null
-                  ? "Ainda não sincronizado nesta sessão"
-                  : _haQuanto(ultima),
-              fontSize: 14,
-              maxLines: 3,
-            ),
-          ),
-        ),
-        ValueListenableBuilder<MbFila>(
-          valueListenable: meuBancoFila,
-          builder: (context, fila, _) => Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (fila.pendentes > 0)
-                  TextFont(
-                    text: fila.pendentes == 1
-                        ? "1 alteração aguardando envio"
-                        : "${fila.pendentes} alterações aguardando envio",
-                    fontSize: 14,
-                    maxLines: 2,
-                  ),
-                for (final r in fila.rejeitados)
-                  TextFont(
-                    text: "Rejeitado: $r",
-                    fontSize: 13,
-                    maxLines: 4,
-                    textColor: Theme.of(context).colorScheme.error,
-                  ),
-              ],
-            ),
-          ),
-        ),
-        ValueListenableBuilder<String?>(
-          valueListenable: meuBancoUltimoErro,
-          builder: (context, erro, _) => erro == null
-              ? const SizedBox.shrink()
-              : Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 20, vertical: 5),
-                  child: TextFont(
-                    text: "Erro: " + erro,
-                    fontSize: 14,
-                    maxLines: 6,
-                    textColor: Theme.of(context).colorScheme.error,
+          _secao("Contas conectadas", [const ContasConectadas()]),
+          if (!kIsWeb)
+            _secao("Pareamento", [
+              _campos(),
+              const SizedBox(height: 10),
+              Row(children: [
+                if (!kIsWeb) ...[
+                  Expanded(child: _parearQr()),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _sincronizar,
+                    child: const Text("Trocar pareamento"),
                   ),
                 ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 10),
-          child: Button(
-            label: "Desconectar",
-            expandedLayout: true,
-            color: Theme.of(context).colorScheme.errorContainer,
-            textColor: Theme.of(context).colorScheme.onErrorContainer,
-            onTap: () async {
-              await meuBancoDesconectar();
-              await _carregar();
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 5),
-          child: TextFont(
-            text:
-                "Desconectar apaga o token e o ponto de sincronização. As transações já importadas continuam no app.",
-            fontSize: 12,
-            maxLines: 5,
-          ),
-        ),
-        if (!kIsWeb)
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 10),
-            child: Button(
-              label: _procurandoAtualizacao
-                  ? "Procurando..."
-                  : "Procurar atualização",
-              disabled: _procurandoAtualizacao,
-              expandedLayout: true,
-              onTap: _procurarAtualizacao,
+              ]),
+              const SizedBox(height: 4),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton(
+                  style: TextButton.styleFrom(foregroundColor: e.warntx),
+                  onPressed: () async {
+                    await meuBancoDesconectar();
+                    await _carregar();
+                  },
+                  child: const Text("Desconectar este aparelho"),
+                ),
+              ),
+              Text(
+                  "Desconectar apaga o token e o ponto de sincronização. As transações já importadas continuam no app.",
+                  style: EdTexto.rotulo(context)),
+            ]),
+        ] else
+          _secao("Parear com o Meu Banco", [
+            Text(
+                "Importa contas, cartões e transações do Meu Banco. O acesso fica guardado de forma segura no aparelho e não entra nos backups.",
+                style: EdTexto.corpo(context).copyWith(color: e.mu)),
+            const SizedBox(height: 14),
+            if (!kIsWeb) ...[_parearQr(), const SizedBox(height: 16)],
+            _campos(),
+            const SizedBox(height: 10),
+            FilledButton(
+              onPressed: _sincronizar,
+              child: const Text("Parear"),
             ),
-          ),
-        if (_msgAtualizacao != null)
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 20, vertical: 5),
-            child: TextFont(
-              text: _msgAtualizacao!,
-              fontSize: 14,
-              maxLines: 6,
+          ]),
+        _secao("App", [
+          if (!kIsWeb)
+            OutlinedButton(
+              onPressed: _procurandoAtualizacao ? null : _procurarAtualizacao,
+              child: Text(_procurandoAtualizacao
+                  ? "Procurando…"
+                  : "Procurar atualização"),
             ),
-          ),
-        Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20, vertical: 5),
-          child: TextFont(
-            text:
-                "Versão instalada: ${packageInfoGlobal?.version ?? ""}+${packageInfoGlobal?.buildNumber ?? ""}",
-            fontSize: 12,
-          ),
-        ),
+          if (_msgAtualizacao != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(_msgAtualizacao!, style: EdTexto.rotulo(context)),
+            ),
+          const SizedBox(height: 8),
+          Text(
+              "Versão instalada: ${packageInfoGlobal?.version ?? ""}+${packageInfoGlobal?.buildNumber ?? ""}",
+              style: EdTexto.mono(context)),
+          const SizedBox(height: 32),
+        ]),
       ],
     );
   }
