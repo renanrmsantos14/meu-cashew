@@ -169,7 +169,7 @@ Future<void> atualizadorBaixarEInstalar(
       throw Exception("endereço de download não confiável");
     }
     final dir = await getTemporaryDirectory();
-    arquivo = File("${dir.path}/meu-cashew-${nova.versao}.apk");
+    arquivo = File("${dir.path}/renancash-${nova.versao}.apk");
     if (await arquivo.exists()) await arquivo.delete();
     final client = http.Client();
     try {

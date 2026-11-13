@@ -124,7 +124,7 @@ void main() {
     expect(m.transform.storage[0], 1.0);
   });
 
-  test('tema editorial dá contraste legível nos papéis de container usados pelo Cashew', () {
+  test('tema editorial dá contraste legível nos papéis de container usados pelo RenanCash', () {
     double contraste(Color a, Color b) {
       final la = a.computeLuminance(), lb = b.computeLuminance();
       return (max(la, lb) + 0.05) / (min(la, lb) + 0.05);

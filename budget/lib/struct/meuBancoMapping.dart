@@ -1,4 +1,4 @@
-// Mapeamento puro (sem Flutter/Drift) da resposta do Meu Banco para dados do Cashew.
+// Mapeamento puro (sem Flutter/Drift) da resposta do Meu Banco para dados do RenanCash.
 // Espelha public/regras.js do painel do Meu Banco (CATEGORIAS, traduzir, naoEhGasto, valorGasto).
 
 import 'package:budget/struct/mbSync/categoriaEfetiva.dart';
@@ -288,7 +288,7 @@ class MbCompra {
 class MbTransacao {
   final String pk;
   final String nome;
-  // Sinal do Cashew: despesa negativa, receita positiva.
+  // Sinal do RenanCash: despesa negativa, receita positiva.
   final double valor;
   final bool receita;
   final String nota;
@@ -418,7 +418,7 @@ MbResultado mbMapearPull(Map<String, dynamic> json, MbContextoCategoria ctx,
     final bruto = (t["amount"] as num).toDouble();
     final contaId = t["account_id"].toString();
     final cartao = cartoes[contaId] ?? false;
-    // Cartão: compra positiva vira despesa (negativa), estorno vira receita. Conta: o sinal já é o do Cashew.
+    // Cartão: compra positiva vira despesa (negativa), estorno vira receita. Conta: o sinal já é o do RenanCash.
     final valor = cartao ? -bruto : bruto;
     // Fila "Para revisar" (só conta): a resposta do usuário decide o que Pix e envios ao Santander são.
     // Só vale no ciclo atual (o histórico não é reclassificado) ou onde o usuário já respondeu.

@@ -62,7 +62,7 @@ MbPareamento? mbLerLinkPareamento(Uri uri) {
 }
 
 // Conta nova: apaga o espelho, a fila, o estado e o que foi importado da conta anterior (carteiras sem uso, inclusive).
-// O que nasceu no Cashew fica e é reenviado como novo, porque o espelho está vazio.
+// O que nasceu no RenanCash fica e é reenviado como novo, porque o espelho está vazio.
 Future<void> mbTrocarConta() async {
   (await SharedPreferences.getInstance()).remove('mbNotifCursor');
   await mbCriarTabelas();
@@ -77,7 +77,7 @@ Future<void> mbTrocarConta() async {
     await database.customStatement('''
       DELETE FROM wallets WHERE wallet_pk LIKE 'mb:%'
         AND wallet_pk NOT IN (SELECT wallet_fk FROM transactions)''');
-    // Categorias importadas sem uso local saem; as que ainda têm lançamento do Cashew ficam.
+    // Categorias importadas sem uso local saem; as que ainda têm lançamento do RenanCash ficam.
     await database.customStatement(
         "DELETE FROM associated_titles WHERE category_fk LIKE 'mb:cat:%'");
     await database.customStatement('''
@@ -121,7 +121,7 @@ Future<bool> mbConfirmarHost(BuildContext? context, String base) async {
     "Só continue se o endereço for o do seu painel do Meu Banco.",
     if (jaPareado) "O pareamento atual será substituído.",
     if (trocaConta)
-      "Os dados importados da conta anterior serão removidos deste aparelho. O que você criou no Cashew continua.",
+      "Os dados importados da conta anterior serão removidos deste aparelho. O que você criou no RenanCash continua.",
   ];
   final confirmou = await openPopup<bool>(
     ctx,

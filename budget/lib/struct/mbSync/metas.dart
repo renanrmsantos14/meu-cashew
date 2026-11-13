@@ -10,10 +10,10 @@ import 'package:drift/drift.dart';
 
 // Metas do Meu Banco.
 //
-// Modelo: a meta é um Objetivo "meta" do Cashew (já sincronizado como `metas`). O que o Cashew não tem é
+// Modelo: a meta é um Objetivo "meta" do RenanCash (já sincronizado como `metas`). O que o RenanCash não tem é
 // "a meta é composta por estas aplicações": isso vive em `mb_meta_aplicacao` (aplicação -> meta). A chave
 // primária na aplicação garante "cada aplicação em uma meta só". O vínculo é copiado em
-// `transactions.objective_fk` das transações `mb:inv:*` (mbReconciliarVinculos), e o progresso nativo do Cashew
+// `transactions.objective_fk` das transações `mb:inv:*` (mbReconciliarVinculos), e o progresso nativo do RenanCash
 // (soma dos lançamentos pagos da meta) passa a ser a soma dos saldos atuais dessas aplicações.
 // A tabela própria (e não só o objective_fk) existe porque o vínculo precisa sobreviver a um aparelho em que a
 // transação da aplicação ainda não existe; e mexer só em `objective_fk` não cria ajuste (`mb_aplicado`) nem
@@ -90,7 +90,7 @@ Future<void> mbDefinirAplicacoesDaMeta(String metaPk, Iterable<String> aplicacao
             'INSERT OR REPLACE INTO mb_meta_aplicacao (aplicacao_pk, meta_pk) VALUES (?, ?)',
             [pk, metaPk]);
       }
-      // O tile do Cashew só mostra o progresso positivo em meta de poupança (income); saldo de aplicação é positivo.
+      // O tile do RenanCash só mostra o progresso positivo em meta de poupança (income); saldo de aplicação é positivo.
       if (aplicacaoPks.isNotEmpty) {
         await database.customUpdate(
             'UPDATE objectives SET income = 1 WHERE objective_pk = ? AND income = 0',

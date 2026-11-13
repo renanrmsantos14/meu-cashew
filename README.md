@@ -1,53 +1,18 @@
-<h1 align="center" style="font-size:28px; line-height:1"><b>Cashew</b></h1>
-
-
-<div align="center">
-  <a href="https://cashewapp.web.app/">
-    <img alt="Icon" src="promotional/icons/icon.png" width="150px" >
-  </a>
-</div>
-
-
-<br />
+<h1 align="center" style="font-size:28px; line-height:1"><b>RenanCash</b></h1>
 
 <div align="center">
-  <a href="https://apps.apple.com/us/app/cashew-expense-budget-tracker/id6463662930">
-    <img alt="iOS App Store Badge" src="promotional/store-banners/app-store-badge.png" height="60px">
-  </a>
-  <a href="https://play.google.com/store/apps/details?id=com.budget.tracker_app">
-    <img alt="Google Play Badge" src="promotional/store-banners/google-play-badge.png" height="60px">
-  </a>
-  <a href="https://github.com/jameskokoska/Cashew/releases/">
-    <img alt="GitHub Badge" src="promotional/store-banners/github-badge.png" height="60px">
-  </a>
-  <a href="https://budget-track.web.app/">
-    <img alt="PWA Badge" src="promotional/store-banners/pwa-badge.png" height="60px">
-  </a>
+  <img alt="Ícone" src="promotional/icons/icon.png" width="150px">
 </div>
 
-<h3 align="center" style="font-size:28px; line-height:1">
-  <a href="https://github.com/jameskokoska/Cashew/issues/725">🚀 Cashew Beta Testing</a>
-</h3>
-
----
-
 <br />
 
-<a href="https://cashewapp.web.app/">
-  <div align="center">
-    <img width="95%" src="promotional/GitHub/SocialPreviewGitHub.png" alt="Promo banner">
-  </div>
-</a>
-
-<br />
-
-Cashew is a full-fledged, feature-rich application designed to empower users in managing their finances effectively. Built using Flutter - with Drift's SQL package, and Firebase - this app offers a seamless and intuitive user experience across various devices. Development started in September 2021.
+RenanCash é um app de finanças pessoais com sincronização do Meu Banco. É um fork GPL-3.0 do [Cashew](https://github.com/jameskokoska/Cashew), de James Kokoska; as seções em inglês abaixo vêm da documentação do projeto original.
 
 ---
 
 ## Atualizações
 
-Este fork (Meu Cashew) é distribuído por GitHub Releases, não pela Play Store.
+O RenanCash é distribuído por GitHub Releases, não pela Play Store.
 
 - Primeira instalação: baixe o `.apk` mais recente em [Releases](https://github.com/renanrmsantos14/meu-cashew/releases/latest) e instale manualmente (permita "instalar apps desconhecidos" para o navegador/gerenciador de arquivos).
 - Depois disso o app avisa quando houver versão nova ao abrir, e há o botão "Procurar atualização" em Configurações > Meu Banco.
@@ -282,15 +247,15 @@ Note: required Firebase.
 - Long term loans create a goal. However, the goals total is not used. Instead the total of the goal is calculated by totalling the proper polarity of transactions of the opposite type. For example, if it was a loan of 100$ lent out, the initial transaction would be 100$ of negative polarity (expense) and that would be the total of the goal. When a payment is made, it is made in the opposite (positive) polarity (income) and added to the total 'paid back'. We can easily find how much is remaining by taking the difference (or the addition including polarities).
 
 
-## Meu Cashew (fork com sincronização do Meu Banco)
+## RenanCash (fork com sincronização do Meu Banco)
 
-Este repositório é um fork GPL-3.0 do [Cashew](https://github.com/jameskokoska/Cashew), mantido sob a mesma licença. As mudanças: id de aplicativo `br.renan.meucashew` (instala ao lado do Cashew original), sem Firebase/google-services e sincronização das transações do Meu Banco.
+Este repositório é um fork GPL-3.0 do [Cashew](https://github.com/jameskokoska/Cashew), mantido sob a mesma licença. As mudanças: id de aplicativo `br.renan.meucashew` (mantido do nome anterior para atualizar sem perder dados; instala ao lado do Cashew original), sem Firebase/google-services e sincronização das transações do Meu Banco.
 
 Como configurar a sincronização:
 1. No painel do Meu Banco, gere um token de app (`mb_...`).
 2. No app: Configurações > Meu Banco. Confira o endereço, cole o token e toque em "Sincronizar agora".
 3. Depois disso a sincronização roda ao abrir o app e ao puxar a tela para atualizar.
 
-O token fica no armazenamento seguro do aparelho (fora dos backups do Cashew). "Desconectar" apaga o token e o ponto de sincronização, sem apagar as transações importadas. Futuras parcelas, pagamentos de fatura e transferências entre contas próprias não são importados como gastos. A conta corrente do Santander fica fora do app (carteira e lançamentos). Os investimentos entram na carteira "Investimentos", um ajuste de saldo por investimento com o saldo atual (fora de gastos e receitas).
+O token fica no armazenamento seguro do aparelho (fora dos backups do app). "Desconectar" apaga o token e o ponto de sincronização, sem apagar as transações importadas. Futuras parcelas, pagamentos de fatura e transferências entre contas próprias não são importados como gastos. A conta corrente do Santander fica fora do app (carteira e lançamentos). Os investimentos entram na carteira "Investimentos", um ajuste de saldo por investimento com o saldo atual (fora de gastos e receitas).
 
 Build release assinado: crie `budget/android/key.properties` (ignorado pelo git) com `externalFile=/caminho/do/key.properties` ou com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`.

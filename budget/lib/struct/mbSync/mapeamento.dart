@@ -1,9 +1,10 @@
 import 'package:budget/struct/mbSync/detectar.dart';
 
-const String prefixoCashew = 'cashew:';
-String idDoPk(String pk) => prefixoCashew + pk;
+// O valor 'cashew:' é contrato de sincronização com o Meu Banco (ids já gravados no servidor): não renomear.
+const String prefixoLocal = 'cashew:';
+String idDoPk(String pk) => prefixoLocal + pk;
 String pkDoId(String id) =>
-    id.startsWith(prefixoCashew) ? id.substring(prefixoCashew.length) : id;
+    id.startsWith(prefixoLocal) ? id.substring(prefixoLocal.length) : id;
 
 String _dois(int n) => n.toString().padLeft(2, '0');
 String dataLocal(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${_dois(d.month)}-${_dois(d.day)}';

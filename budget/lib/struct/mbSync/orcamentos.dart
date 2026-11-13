@@ -8,9 +8,9 @@ import 'package:flutter/material.dart' show DateTimeRange;
 
 // Orçamentos do Meu Banco.
 //
-// Modelo: orçamento "todas as transações" do Cashew (`addedTransactionsOnly = false`) com os filtros
+// Modelo: orçamento "todas as transações" do RenanCash (`addedTransactionsOnly = false`) com os filtros
 // padrão (sem renda nem ajuste de saldo) + pertencimento aditivo N:N em `mb_orcamento_tx`.
-// - `budgetFksExclude` do Cashew é subtrativo: um orçamento novo engoliria todas as transações.
+// - `budgetFksExclude` do RenanCash é subtrativo: um orçamento novo engoliria todas as transações.
 // - `sharedReferenceBudgetPk` é único por transação: não permite "em vários orçamentos".
 // Sem linhas para a transação, ela pertence ao Geral (e aos orçamentos por categoria). Com linhas, só aos escolhidos.
 

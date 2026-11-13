@@ -134,7 +134,7 @@ void main() {
       expect(_t(r, 'p3').categoriaNome, mbCategoriaAClassificar);
     });
 
-    test('a categoria que o usuário escolheu no Cashew (ajuste) vale mais que a da fila', () {
+    test('a categoria que o usuário escolheu no RenanCash (ajuste) vale mais que a da fila', () {
       final ctx = MbContextoCategoria({'p1': {'categoria_id': 'cashew:casa'}}, [], {}, {});
       final r = mbMapearPull(_json([_tx('p1', 'Pix enviado: Joao', -50)]), ctx,
           revisoes: MbRevisoes.deRegistros([_destino('JOAO', 'cashew:lazer')]),

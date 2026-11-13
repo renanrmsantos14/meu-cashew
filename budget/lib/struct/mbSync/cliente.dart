@@ -85,7 +85,7 @@ class MbCliente {
   // Sem token: a senha do painel vira um token de aparelho.
   Future<Object?> parear(String senha) async => (await _chamar(
       'POST', '/api/app/parear',
-      corpo: {'senha': senha, 'nome': 'Cashew'}))['token'];
+      corpo: {'senha': senha, 'nome': 'RenanCash'}))['token'];
 
   Future<Map<String, dynamic>> puxar(String? desde) => _chamar('GET', '/api/sync',
       query: desde == null || desde.isEmpty ? null : {'desde': desde});

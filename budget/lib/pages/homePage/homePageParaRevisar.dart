@@ -25,7 +25,7 @@ const _rotulos = {
 };
 const int _itensNoCartao = 3;
 
-/// Categoria de despesa pelo nome: a do Cashew com o mesmo nome ou a própria do Meu Banco.
+/// Categoria de despesa pelo nome: a do RenanCash com o mesmo nome ou a própria do Meu Banco.
 Future<String> _pkDaCategoria(String nome) async {
   final todas = await database.select(database.categories).get();
   for (final c in todas) {

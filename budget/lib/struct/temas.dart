@@ -101,7 +101,7 @@ ThemeMode modoDoTema(String? id) => switch (id) {
       _ => ThemeMode.system,
     };
 
-AppColors coresCashew(TemaPronto t) {
+AppColors coresRenanCash(TemaPronto t) {
   final e = t.cores;
   final claro = t.brilho == Brightness.light;
   return AppColors(colors: {
@@ -141,7 +141,7 @@ Color _melhorSobre(Color fundo, List<Color> candidatos) {
 ThemeData temaFlutter(TemaPronto t) {
   final e = t.cores;
   final b = t.brilho;
-  final cashew = coresCashew(t);
+  final coresApp = coresRenanCash(t);
   final container = Color.alphaBlend(e.acc.withOpacity(.12), e.bg);
   final sobreAcc = _melhorSobre(e.acc, [Colors.white, e.bg]);
   final base = ThemeData(
@@ -271,9 +271,9 @@ ThemeData temaFlutter(TemaPronto t) {
     typography: Typography.material2021(),
   );
   return base.copyWith(
-    extensions: <ThemeExtension<dynamic>>[cashew, e],
+    extensions: <ThemeExtension<dynamic>>[coresApp, e],
     appBarTheme: AppBarTheme(
-      systemOverlayStyle: getSystemUiOverlayStyle(cashew, b),
+      systemOverlayStyle: getSystemUiOverlayStyle(coresApp, b),
     ),
   );
 }
