@@ -55,7 +55,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => HomePageState();
 }
 
-class HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class HomePageState extends State<HomePage> {
   void refreshState() {
     setState(() {});
   }
@@ -79,36 +79,18 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   bool showElevation = false;
   late ScrollController _scrollController;
-  late AnimationController _animationControllerHeader;
-  late AnimationController _animationControllerHeader2;
   int selectedSlidingSelector = 1;
 
   void initState() {
     super.initState();
-    _animationControllerHeader = AnimationController(vsync: this, value: 1);
-    _animationControllerHeader2 = AnimationController(vsync: this, value: 1);
-
     _scrollController = ScrollController();
-    _scrollController.addListener(_scrollListener);
     meuBancoPareado.addListener(refreshState);
     meuBancoVerificarPareado();
-  }
-
-  _scrollListener() {
-    double percent = _scrollController.offset / (200);
-    if (percent <= 1) {
-      double offset = _scrollController.offset;
-      if (percent >= 1) offset = 0;
-      _animationControllerHeader.value = 1 - offset / (200);
-      _animationControllerHeader2.value = 1 - offset * 2 / (200);
-    }
   }
 
   @override
   void dispose() {
     meuBancoPareado.removeListener(refreshState);
-    _animationControllerHeader.dispose();
-    _animationControllerHeader2.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -279,10 +261,16 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: HomePageWelcomeBannerSmall(
-                            showUsername: showUsername,
-                            showGreeting: showGreeting,
-                            username: appStateSettings["username"] ?? "",
+                          // Toque no nome abre a edição (como no banner antigo).
+                          child: GestureDetector(
+                            onTap: () => enterNameBottomSheet(context),
+                            child: HomePageWelcomeBannerSmall(
+                              showUsername: showUsername &&
+                                  isHomeScreenSectionEnabled(
+                                      context, "showUsernameWelcomeBanner"),
+                              showGreeting: showGreeting,
+                              username: appStateSettings["username"] ?? "",
+                            ),
                           ),
                         ),
                         Tooltip(

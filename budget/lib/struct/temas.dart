@@ -117,7 +117,10 @@ AppColors coresCashew(TemaPronto t) {
     "unPaidUpcoming": e.acc,
     "unPaidOverdue": e.warn,
     "incomeAmount": e.pos,
-    "expenseAmount": e.warn,
+    // Gasto em tom neutro; só renda ganha cor (verde).
+    "expenseAmount": e.tx,
+    // Estouro de orçamento/limite continua em alerta.
+    "overspentAmount": e.warn,
     "warningOrange": claro ? const Color(0xFF9A5B00) : const Color(0xFFE0A15E),
     "starYellow": claro ? const Color(0xFFB98900) : const Color(0xFFFFD54F),
     "dividerColor": e.line,

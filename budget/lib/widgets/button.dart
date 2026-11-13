@@ -78,14 +78,15 @@ class _ButtonState extends State<Button> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Sem cor própria, o botão é o principal: fundo na cor do texto.
+    final cs = Theme.of(context).colorScheme;
+    final principal = widget.color == null && !widget.disabled;
+    final frente = principal ? cs.surface : cs.onSurface;
     Widget text = TextFont(
       text: widget.label,
       fontSize: widget.fontSize,
-      textColor: widget.textColor ??
-          (appStateSettings["materialYou"]
-              ? dynamicPastel(context, Theme.of(context).colorScheme.onPrimary,
-                  amount: 0.2)
-              : Theme.of(context).colorScheme.onSecondaryContainer),
+      textColor: widget.textColor ?? frente,
+      fontWeight: principal ? FontWeight.w600 : FontWeight.normal,
       maxLines: 5,
       textAlign: widget.icon != null ? TextAlign.start : TextAlign.center,
     );
@@ -107,13 +108,7 @@ class _ButtonState extends State<Button> with TickerProviderStateMixin {
               ? appStateSettings["materialYou"]
                   ? Colors.grey
                   : getColor(context, "lightDarkAccentHeavy")
-              : widget.color != null
-                  ? widget.color
-                  : appStateSettings["materialYou"]
-                      ? dynamicPastel(
-                          context, Theme.of(context).colorScheme.primary,
-                          amount: 0.15)
-                      : Theme.of(context).colorScheme.secondaryContainer,
+              : widget.color ?? cs.onSurface,
           onHighlightChanged: (value) {
             if (appStateSettings["appAnimations"] == AppAnimations.all.index)
               setState(() {
@@ -128,10 +123,7 @@ class _ButtonState extends State<Button> with TickerProviderStateMixin {
               widget.onDisabled!();
           },
           onLongPress: widget.onLongPress,
-          borderRadius:
-              getPlatform() == PlatformOS.isIOS && widget.borderRadius == null
-                  ? 10
-                  : widget.borderRadius ?? 20,
+          borderRadius: widget.borderRadius ?? 14,
           child: Padding(
             padding: EdgeInsetsDirectional.only(
               bottom: widget.expandToFillBottomExtraSafeArea
@@ -153,11 +145,7 @@ class _ButtonState extends State<Button> with TickerProviderStateMixin {
                         child: Icon(
                           widget.icon,
                           size: 21,
-                          color: widget.iconColor == null
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .onSecondaryContainer
-                              : widget.iconColor,
+                          color: widget.iconColor ?? frente,
                         ),
                       ),
                     widget.flexibleLayout

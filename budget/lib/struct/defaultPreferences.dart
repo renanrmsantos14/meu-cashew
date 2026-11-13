@@ -147,7 +147,6 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     "showPastSpendingTrajectory": false,
     "lastSynced": null,
     "font": "Geist",
-    "forceSmallHeader": false,
     "animationSpeed": 1.0,
     "logging": false,
     "sharedBudgets": false,

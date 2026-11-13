@@ -1,0 +1,4 @@
+[{"acao":"goto","ms":11000},{"acao":"print","nome":"50_inicio"},
+{"acao":"clicar","alvo":"Transações","ms":3000},{"acao":"print","nome":"51_transacoes_vazia"},
+{"acao":"xy","x":347,"y":705,"ms":4000},{"acao":"print","nome":"52_titulo"},
+{"acao":"contexto","escuro":true},{"acao":"goto","ms":11000},{"acao":"print","nome":"53_inicio_escuro"}]

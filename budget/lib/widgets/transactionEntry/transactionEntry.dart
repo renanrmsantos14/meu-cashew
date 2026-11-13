@@ -310,10 +310,10 @@ class TransactionEntry extends StatelessWidget {
         cacheImage: true,
         category: category,
         categoryPk: transaction.categoryFk,
-        size: 27,
-        sizePadding: 20,
+        size: 24,
+        sizePadding: 16,
         margin: EdgeInsetsDirectional.zero,
-        borderRadius: 100,
+        borderRadius: 12,
         onTap: openContainer,
       );
       Widget actionButton(EdgeInsetsDirectional padding) {
