@@ -168,6 +168,14 @@ class EdTexto {
       );
 }
 
+/// Aba ativa dos controles segmentados (Despesa/Renda, Todos/Despesa/Renda).
+BoxDecoration indicadorSegmento(EditorialCores e, {double raio = 10}) =>
+    BoxDecoration(
+      color: e.bg,
+      borderRadius: BorderRadius.circular(raio),
+      border: Border.all(color: e.line),
+    );
+
 /// Cartão escuro de destaque (saldo). Dentro dele vale a paleta escura do app
 /// com o fundo do cartão e o acento escuro, nos dois modos.
 class CartaoEscuro extends StatelessWidget {

@@ -1,4 +1,4 @@
-import 'package:budget/colors.dart';
+import 'package:budget/struct/editorial.dart';
 import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/openContainerNavigation.dart';
 import 'package:budget/widgets/tappable.dart';
@@ -35,9 +35,21 @@ class AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color color = appStateSettings["materialYou"]
-        ? Theme.of(context).colorScheme.secondary.withOpacity(0.3)
-        : getColor(context, "lightDarkAccentHeavy");
+    final e = cores(context);
+    final Color color = e.mu;
+    // Placeholder alto (lista vazia) vira linha compacta: sem caixa vazia grande.
+    final bool compacto = (height ?? 0) > 80;
+    final Widget? rotulo = labelUnder == null
+        ? null
+        : TextFont(text: labelUnder!, fontSize: 14, textColor: color);
+    final Widget icone = Icon(
+      icon ??
+          (appStateSettings["outlinedIcons"]
+              ? Icons.add_outlined
+              : Icons.add_rounded),
+      size: 22,
+      color: color,
+    );
     Widget getButton(onTap) {
       return Tappable(
         color: Colors.transparent,
@@ -45,39 +57,34 @@ class AddButton extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            border: Border.all(
-              width: 1.5,
-              color: color,
-            ),
+            border: Border.all(width: 1, color: e.line),
             borderRadius: BorderRadiusDirectional.circular(borderRadius),
           ),
           width: width,
-          height: height,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Center(
-                child: Icon(
-                  icon ??
-                      (appStateSettings["outlinedIcons"]
-                          ? Icons.add_outlined
-                          : Icons.add_rounded),
-                  size: 22,
-                  color: color,
+          height: compacto ? 56 : height,
+          child: compacto
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    icone,
+                    if (rotulo != null) ...[
+                      const SizedBox(width: 6),
+                      Flexible(child: rotulo),
+                    ],
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Center(child: icone),
+                    if (rotulo != null)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(top: 2),
+                        child: rotulo,
+                      ),
+                  ],
                 ),
-              ),
-              if (labelUnder != null)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(top: 2),
-                  child: TextFont(
-                    text: labelUnder ?? "",
-                    fontSize: 14,
-                    textColor: getColor(context, "textLight"),
-                  ),
-                ),
-            ],
-          ),
         ),
         onTap: () {
           onTap();

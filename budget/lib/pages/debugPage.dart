@@ -406,16 +406,17 @@ class DebugPage extends StatelessWidget {
               : Icons.apple_rounded,
         ),
         SettingsContainerSwitch(
-          title: "Fancy budget animations on iOS",
-          description: "Enables the animated goo on iOS",
-          onSwitched: (value) {
-            updateSettings("iOSAnimatedGoo", value,
-                pagesNeedingRefresh: [], updateGlobalState: true);
+          onSwitched: (value) async {
+            updateSettings("incognitoKeyboard", value,
+                updateGlobalState: false);
           },
-          initialValue: appStateSettings["iOSAnimatedGoo"] == true,
+          title: "Incognito Text Input",
+          description:
+              "Use the incognito keyboard for text input (if supported)",
+          initialValue: appStateSettings["incognitoKeyboard"] == true,
           icon: appStateSettings["outlinedIcons"]
-              ? Icons.animation_outlined
-              : Icons.animation_rounded,
+              ? Icons.keyboard_outlined
+              : Icons.keyboard_rounded,
         ),
         FutureBuilder<bool>(
           future: inAppReview.isAvailable(),
@@ -430,31 +431,6 @@ class DebugPage extends StatelessWidget {
               },
             );
           },
-        ),
-        SettingsContainerSwitch(
-          onSwitched: (value) async {
-            updateSettings("incognitoKeyboard", value,
-                updateGlobalState: false);
-          },
-          title: "Incognito Text Input",
-          description:
-              "Use the incognito keyboard for text input (if supported)",
-          initialValue: appStateSettings["incognitoKeyboard"] == true,
-          icon: appStateSettings["outlinedIcons"]
-              ? Icons.keyboard_outlined
-              : Icons.keyboard_rounded,
-        ),
-        SettingsContainerSwitch(
-          title: "Disable Shadows",
-          onSwitched: (value) {
-            updateSettings("disableShadows", value, updateGlobalState: true);
-            // if (value == true) {
-            //   updateSettings("removeZeroTransactionEntries", false,
-            //       pagesNeedingRefresh: [0], updateGlobalState: false);
-            // }
-          },
-          initialValue: appStateSettings["disableShadows"] == true,
-          icon: Icons.dark_mode,
         ),
         SettingsContainerSwitch(
           title: "Replace notification setting button with Bill Splitter",

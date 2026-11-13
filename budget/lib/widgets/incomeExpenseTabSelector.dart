@@ -111,13 +111,8 @@ class _IncomeExpenseTabSelectorState extends State<IncomeExpenseTabSelector>
           dividerColor: Colors.transparent,
           indicatorColor: Colors.transparent,
           indicatorSize: TabBarIndicatorSize.tab,
-          indicator: BoxDecoration(
-            color: e.bg,
-            borderRadius: widget.hasBorderRadius
-                ? BorderRadius.circular(10)
-                : BorderRadius.zero,
-            border: Border.all(color: e.line),
-          ),
+          indicator: indicadorSegmento(e,
+              raio: widget.hasBorderRadius ? 10 : 0),
           labelColor: e.tx,
           unselectedLabelColor: e.mu,
           onTap: (value) {
