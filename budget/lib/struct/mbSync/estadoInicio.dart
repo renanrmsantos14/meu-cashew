@@ -141,7 +141,8 @@ String? mbProximoDiaMes(Object? iso, DateTime agora) {
 
 double _num(Object? v) => v is num ? v.toDouble() : 0;
 
-String _sigla(String nome) {
+/// Duas letras do banco para o avatar (Início e Contas conectadas).
+String mbSigla(String nome) {
   final letras = nome.replaceAll(RegExp(r'[^A-Za-zÀ-ú]'), '');
   return letras.isEmpty
       ? '··'
@@ -178,14 +179,14 @@ ModeloInicio montarModeloInicio({
   final linhas = <ContaInicio>[
     for (final c in correntes)
       (
-        sigla: _sigla('${c['bank'] ?? c['name']}'),
+        sigla: mbSigla('${c['bank'] ?? c['name']}'),
         nome: '${c['bank'] ?? c['name']}',
         tipo: 'Conta corrente',
         saldo: _num(c['balance'])
       ),
     if (poupancas.length == 1)
       (
-        sigla: _sigla('${poupancas.first['bank'] ?? poupancas.first['name']}'),
+        sigla: mbSigla('${poupancas.first['bank'] ?? poupancas.first['name']}'),
         nome: '${poupancas.first['bank'] ?? poupancas.first['name']}',
         tipo: 'Poupança',
         saldo: _num(poupancas.first['balance'])

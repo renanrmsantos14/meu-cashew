@@ -5,11 +5,12 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 # Verificar Meu Banco
 
 ## Cobre
-- Código: `budget/lib/struct/mbSync/**`, `budget/lib/struct/meuBancoSync.dart`, `meuBancoMapping.dart`, `budget/lib/struct/mbSync/revisao.dart` (fila "Para revisar"), `budget/lib/struct/mbSync/emprestimos.dart`, `budget/lib/struct/mbSync/reembolso.dart`, `budget/lib/pages/homePage/homePageParaRevisar.dart`, `budget/lib/pages/homePage/homePageEmprestimos.dart`, `budget/lib/struct/mbSync/orcamentos.dart` (orçamentos, ciclo, alerta 80/100), `estadoInicio.dart`, `inicioOrdem.dart`, `budget/lib/pages/homePage/homePageOrcamentoPadrao.dart`, `homePageFaturaPatrimonio.dart`, `budget/lib/pages/meuBancoPage.dart`, `meuBancoParear.dart`, `meuBancoConectar.dart`, `budget/lib/widgets/util/appLinks.dart`, manifest e widget Android.
+- Código: `budget/lib/struct/mbSync/**`, `budget/lib/struct/meuBancoSync.dart`, `meuBancoMapping.dart`, `budget/lib/struct/mbSync/revisao.dart` (fila "Para revisar"), `budget/lib/struct/mbSync/emprestimos.dart`, `budget/lib/struct/mbSync/reembolso.dart`, `budget/lib/pages/homePage/homePageParaRevisar.dart`, `budget/lib/pages/homePage/homePageEmprestimos.dart`, `budget/lib/struct/mbSync/orcamentos.dart` (orçamentos, ciclo, alerta 80/100), `estadoInicio.dart`, `inicioOrdem.dart`, `budget/lib/pages/homePage/homePageOrcamentoPadrao.dart`, `homePageFaturaPatrimonio.dart`, `budget/lib/pages/meuBancoPage.dart`, `meuBancoParear.dart`, `meuBancoConectar.dart`, `meuBancoConexoes.dart` e `struct/mbSync/conexoes.dart` (Contas conectadas), `budget/lib/widgets/util/appLinks.dart`, manifest e widget Android.
 - Schema do Drift continua em 46: as tabelas `mb_registros`, `mb_estado`, `mb_aplicado` e `mb_orcamento_tx` nascem por `mbCriarTabelas()`, fora do Drift.
 
 ## Preparar ambiente
-- `export PATH=$HOME/dev/flutter/bin:$PATH JAVA_HOME=$HOME/dev/jdk17 ANDROID_HOME=$HOME/Android/Sdk` e `cd budget`.
+- `export PATH=$HOME/dev/flutter/bin:$PATH JAVA_HOME=$HOME/dev/jdk17 ANDROID_HOME=$HOME/Android/Sdk` e `cd budget`. No Windows local: Flutter em `/c/Users/mendo/development/flutter-3.24.5/bin`.
+- Servidor (repo `renanrmsantos14/meu-banco`, `apps/worker`): `node --test test/*.test.mjs`. Rotas de conexões: `GET /api/pluggy/items` e `DELETE /api/pluggy/items/:id` (Bearer ou cookie).
 - Sem rede nem token real: os testes usam cliente falso e Drift em memória.
 
 ## Roteiro
@@ -19,6 +20,10 @@ description: "Verifica o sync Meu Banco do app (LWW, pareamento por QR e deep li
 4. Segurança (leitura do diff): token só em `flutter_secure_storage`, nunca em `appStateSettings`; `meubanco://parear` só grava depois de `mbConfirmarEParear`; origem só https (http só em debug para localhost/10.0.2.2); toda entrada manual de token/endereço passa pelo mesmo caminho do QR.
 
 ## Casos de borda
+- Contas conectadas: `flutter test test/mb_conexoes_test.dart` (lista, status, reconectar, vazio/erro, remover com confirmação). Prints: `PRINTS=1 flutter test test/prints_visual_test.dart --update-goldens --plain-name "contas conectadas"`.
+- Remover conexão NÃO apaga as contas no servidor: elas ficam com saldo 0 e `removida = 1` no pull, porque as transações antigas dependem do tipo/banco (sinal do cartão, filtro do Santander). O app só as esconde da Início (`meuBancoSync.dart`). Faturas, investimentos e avisos da conexão somem; `DELETE` repetido devolve 200.
+- `precisaReconectar` vem do servidor (mesma regra `PROBLEMA` dos avisos); `OUTDATED` é falha temporária, não pede login.
+- Web (sessão por cookie) mostra Contas conectadas sem pareamento; conectar banco só pelo celular.
 - Troca de conta apaga espelho, fila, estado, `mb:` importado, carteiras e categorias `mb:` sem uso, e preserva o que nasceu no Cashew.
 - Registro remoto mais velho não sobrescreve o espelho; exclusão local vira tombstone.
 - Token inválido (401) e limite de 30 min (429) mostram mensagem fixa em pt-BR.

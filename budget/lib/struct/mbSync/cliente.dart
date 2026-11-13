@@ -1,3 +1,4 @@
+import 'package:budget/struct/mbSync/conexoes.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -68,11 +69,16 @@ class MbCliente {
       case 429:
         throw MbErroLimite(msg ?? 'Atualizado há pouco. Tente de novo em instantes.',
             DateTime.tryParse('${json['liberado_em']}'));
+      case 404:
+        throw MbErroHttp(404, msg ?? 'Não encontrado no Meu Banco.');
+      case 405:
+        throw MbErroHttp(405,
+            'O servidor do Meu Banco ainda não tem esse recurso. Atualize o Meu Banco e tente de novo.');
       case 400:
         throw MbErroHttp(400, 'O servidor recusou o pedido${msg == null ? '' : ': $msg'}.');
       default:
-        throw MbErroHttp(
-            resp.statusCode, 'O Meu Banco respondeu com erro ${resp.statusCode}.');
+        throw MbErroHttp(resp.statusCode,
+            msg ?? 'O Meu Banco respondeu com erro ${resp.statusCode}.');
     }
   }
 
@@ -114,6 +120,19 @@ class MbCliente {
 
   Future<void> registrarItem(String itemId) async {
     await _chamar('POST', '/api/pluggy/items', corpo: {'itemId': itemId});
+  }
+
+  /// Conexões ativas (bancos) com status e contas.
+  Future<List<MbConexao>> conexoes() async => [
+        for (final c in ((await _chamar('GET', '/api/pluggy/items'))['conexoes']
+                as List? ??
+            const []))
+          if (c is Map) MbConexao.deJson(c.cast<String, dynamic>())
+      ];
+
+  /// Apaga a conexão no Pluggy e no Meu Banco (as contas dela saem do app; o histórico fica).
+  Future<void> removerConexao(String itemId) async {
+    await _chamar('DELETE', '/api/pluggy/items/${Uri.encodeComponent(itemId)}');
   }
 
   Future<Map<String, dynamic>> notificacoes(String? desde) =>
