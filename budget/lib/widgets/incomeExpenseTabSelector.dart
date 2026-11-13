@@ -1,6 +1,5 @@
 import 'package:budget/colors.dart';
 import 'package:budget/functions.dart';
-import 'package:budget/struct/settings.dart';
 import 'package:budget/widgets/animatedExpanded.dart';
 import 'package:budget/widgets/outlinedButtonStacked.dart';
 import 'package:budget/widgets/tappable.dart';
@@ -8,17 +7,15 @@ import 'package:budget/widgets/textWidgets.dart';
 import 'package:budget/widgets/transactionEntry/incomeAmountArrow.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
+import 'package:budget/struct/editorial.dart';
 import 'package:flutter/material.dart';
 
 class IncomeExpenseTabSelector extends StatefulWidget {
   final Function(bool isIncome) onTabChanged;
   final bool initialTabIsIncome;
-  final Color? color;
-  final Color? unselectedColor;
   final bool syncWithInitial;
   final String? incomeLabel;
   final String? expenseLabel;
-  final Color? unselectedLabelColor;
   final bool showIcons;
   final TabController? tabController;
   final Widget? expenseCustomIcon;
@@ -31,12 +28,9 @@ class IncomeExpenseTabSelector extends StatefulWidget {
   IncomeExpenseTabSelector({
     required this.onTabChanged,
     required this.initialTabIsIncome,
-    this.color,
-    this.unselectedColor,
     this.syncWithInitial = false,
     this.incomeLabel,
     this.expenseLabel,
-    this.unselectedLabelColor,
     this.showIcons = true,
     this.tabController,
     this.expenseCustomIcon,
@@ -98,39 +92,29 @@ class _IncomeExpenseTabSelectorState extends State<IncomeExpenseTabSelector>
 
   @override
   Widget build(BuildContext context) {
+    // Controle segmentado: trilho na cor de superfície, aba ativa em cartão
+    // com borda fina.
+    final e = cores(context);
     Widget tabSelector = ClipRRect(
       borderRadius: widget.hasBorderRadius
-          ? BorderRadiusDirectional.circular(
-              getPlatform() == PlatformOS.isIOS ? 10 : 15)
+          ? BorderRadiusDirectional.circular(14)
           : BorderRadiusDirectional.zero,
       child: Material(
-        color: widget.unselectedColor == null
-            ? appStateSettings["materialYou"]
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                : Theme.of(context).brightness == Brightness.dark
-                    ? getColor(context, "lightDarkAccentHeavyLight")
-                        .withOpacity(0.5)
-                    : Colors.black.withOpacity(0.03)
-            : widget.unselectedColor,
+        color: e.surf,
         child: TabBar(
+          padding: widget.hasBorderRadius
+              ? const EdgeInsets.all(4)
+              : EdgeInsets.zero,
           splashFactory:
               getPlatform() == PlatformOS.isIOS ? NoSplash.splashFactory : null,
           controller: _incomeTabController,
           dividerColor: Colors.transparent,
           indicatorColor: Colors.transparent,
           indicatorSize: TabBarIndicatorSize.tab,
-          indicator: BoxDecoration(
-            color: widget.color != null
-                ? widget.color
-                : (appStateSettings["materialYou"]
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.25)
-                    : Theme.of(context).brightness == Brightness.dark
-                        ? getColor(context, "black").withOpacity(0.15)
-                        : Theme.of(context).colorScheme.secondaryContainer),
-          ),
-          labelColor: getColor(context, "black"),
-          unselectedLabelColor: widget.unselectedLabelColor ??
-              getColor(context, "black").withOpacity(0.3),
+          indicator: indicadorSegmento(e,
+              raio: widget.hasBorderRadius ? 10 : 0),
+          labelColor: e.tx,
+          unselectedLabelColor: e.mu,
           onTap: (value) {
             widget.onTabChanged(value == 1);
             setState(() {

@@ -210,6 +210,9 @@ class ObjectiveList extends StatelessWidget {
                                 selectedIncome: isIncome,
                               ),
                               height: 150,
+                              labelUnder: objectiveType == ObjectiveType.loan
+                                  ? "add-loan".tr()
+                                  : "add-goal".tr(),
                             ),
                           ),
                         ),
@@ -259,6 +262,9 @@ class ObjectiveList extends StatelessWidget {
                                   objectiveType: objectiveType,
                                   selectedIncome: isIncome,
                                 ),
+                                labelUnder: objectiveType == ObjectiveType.loan
+                                    ? "add-loan".tr()
+                                    : "add-goal".tr(),
                               );
                       } else {
                         Objective objective = objectivesList[
@@ -474,8 +480,8 @@ class ObjectiveContainer extends StatelessWidget {
                                   children: [
                                     TextFont(
                                       text: objective.name,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                     Row(
                                       children: [
@@ -613,7 +619,7 @@ class ObjectiveContainer extends StatelessWidget {
                                     TextFont(
                                       fontWeight: FontWeight.bold,
                                       text: amountSpentLabel,
-                                      fontSize: 24,
+                                      fontSize: 20,
                                       textColor: objective.type ==
                                               ObjectiveType.loan
                                           ? totalAmount >= objectiveAmount

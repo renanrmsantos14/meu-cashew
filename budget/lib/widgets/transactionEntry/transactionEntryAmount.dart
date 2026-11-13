@@ -9,8 +9,6 @@ import 'package:budget/widgets/textWidgets.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/src/provider.dart';
 
-import 'incomeAmountArrow.dart';
-
 class TransactionEntryAmount extends StatelessWidget {
   const TransactionEntryAmount({
     required this.transaction,
@@ -27,6 +25,14 @@ class TransactionEntryAmount extends StatelessWidget {
     double count = transaction.amount.abs() *
         (amountRatioToPrimaryCurrencyGivenPk(
             Provider.of<AllWallets>(context), transaction.walletFk));
+    final semSinal = (transaction.type == TransactionSpecialType.credit ||
+            transaction.type == TransactionSpecialType.debt) &&
+        transaction.paid == false;
+    final sinal = semSinal
+        ? ''
+        : transaction.income
+            ? '+'
+            : '−';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -40,31 +46,15 @@ class TransactionEntryAmount extends StatelessWidget {
               textBuilder: (number) {
                 return Row(
                   children: [
-                    AnimatedSizeSwitcher(
-                      child:
-                          ((transaction.type == TransactionSpecialType.credit ||
-                                      transaction.type ==
-                                          TransactionSpecialType.debt) &&
-                                  transaction.paid == false)
-                              ? SizedBox.shrink()
-                              : IncomeOutcomeArrow(
-                                  isIncome: transaction.income,
-                                  color: getTransactionAmountColor(
-                                    context,
-                                    transaction,
-                                  ),
-                                  width: 15,
-                                  iconSize: 24,
-                                ),
-                    ),
                     TextFont(
-                      text: convertToMoney(
-                        Provider.of<AllWallets>(context),
-                        number,
-                        finalNumber: count,
-                      ),
-                      fontSize: 19 - (showOtherCurrency ? 1 : 0),
-                      fontWeight: FontWeight.bold,
+                      text: sinal +
+                          convertToMoney(
+                            Provider.of<AllWallets>(context),
+                            number,
+                            finalNumber: count,
+                          ),
+                      fontSize: 15.5 - (showOtherCurrency ? 1 : 0),
+                      fontWeight: FontWeight.w500,
                       textColor:
                           getTransactionAmountColor(context, transaction),
                     ),

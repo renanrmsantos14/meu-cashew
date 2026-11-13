@@ -147,7 +147,6 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     "showPastSpendingTrajectory": false,
     "lastSynced": null,
     "font": "Geist",
-    "forceSmallHeader": false,
     "animationSpeed": 1.0,
     "logging": false,
     "sharedBudgets": false,
@@ -163,11 +162,9 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     // Should be of type Map<String, double>
     "customCurrencyAmounts": {},
     "iOSEmulate": false,
-    "iOSAnimatedGoo": false,
     "expandedNavigationSidebar": true,
     "locale": "pt", // the locale code or "System"
     "firstDayOfWeek": -1, // -1: Locale/System, 0: Sunday, 1: Monday,
-    "disableShadows": false,
     "showBillSplitterShortcut": false,
     "showTransactionPk": false,
     "showMethodAdded": false,

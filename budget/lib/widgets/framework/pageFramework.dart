@@ -137,6 +137,11 @@ class PageFrameworkState extends State<PageFramework>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final double leftBackSwipeDetectionWidth = 30;
 
+  // Com subtítulo (ex.: total gasto do orçamento) o cabeçalho precisa de
+  // altura extra; com 56 o subtítulo fica com opacidade 0.
+  double? get _alturaCabecalho =>
+      widget.expandedHeight ?? (widget.subtitle != null ? 110 : null);
+
   late ScrollController _scrollController =
       widget.scrollController ?? ScrollController();
   late AnimationController _animationControllerShift =
@@ -219,7 +224,7 @@ class PageFrameworkState extends State<PageFramework>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       double expandedHeaderHeight =
-          getExpandedHeaderHeight(context, widget.expandedHeight);
+          getExpandedHeaderHeight(context, _alturaCabecalho);
       _animationControllerShift = AnimationController(
         vsync: this,
         value: expandedHeaderHeight - 56 == 0 ? 1 : 0,
@@ -256,33 +261,32 @@ class PageFrameworkState extends State<PageFramework>
       widget.onBottomReached!();
     }
     double percent;
-    if (getExpandedHeaderHeight(context, widget.expandedHeight) - 56 == 0) {
+    if (getExpandedHeaderHeight(context, _alturaCabecalho) - 56 == 0) {
       percent = 100;
     } else {
       percent = _scrollController.offset /
-          (getExpandedHeaderHeight(context, widget.expandedHeight) - 56);
+          (getExpandedHeaderHeight(context, _alturaCabecalho) - 56);
     }
     if (widget.backButton == true || widget.subtitle != null && percent <= 1) {
       double offset = _scrollController.offset;
       if (percent < 0) offset = 0;
 
-      if (getExpandedHeaderHeight(context, widget.expandedHeight) - 56 == 0) {
+      if (getExpandedHeaderHeight(context, _alturaCabecalho) - 56 == 0) {
         _animationControllerOpacity.value = widget.backButtonOpacity ??
             (0.5 +
                 (offset /
-                    (getExpandedHeaderHeight(context, widget.expandedHeight)) /
+                    (getExpandedHeaderHeight(context, _alturaCabecalho)) /
                     2));
-        _animationControllerShift.value = (offset /
-            (getExpandedHeaderHeight(context, widget.expandedHeight)));
+        _animationControllerShift.value =
+            (offset / (getExpandedHeaderHeight(context, _alturaCabecalho)));
       } else {
         _animationControllerOpacity.value = widget.backButtonOpacity ??
             (0.5 +
                 (offset /
-                    (getExpandedHeaderHeight(context, widget.expandedHeight) -
-                        56) /
+                    (getExpandedHeaderHeight(context, _alturaCabecalho) - 56) /
                     2));
         _animationControllerShift.value = (offset /
-            (getExpandedHeaderHeight(context, widget.expandedHeight) - 56));
+            (getExpandedHeaderHeight(context, _alturaCabecalho) - 56));
       }
     }
     if (_scrollController.offset > 400 &&
@@ -429,7 +433,7 @@ class PageFrameworkState extends State<PageFramework>
       textColor: widget.textColor,
       onBackButton: widget.onBackButton,
       actions: widget.actions,
-      expandedHeight: getExpandedHeaderHeight(context, widget.expandedHeight),
+      expandedHeight: getExpandedHeaderHeight(context, _alturaCabecalho),
       centeredTitle: centeredTitle,
       centeredTitleSmall: centeredTitleSmall,
       belowAppBarPaddingWhenCenteredTitleSmall:
@@ -1046,9 +1050,8 @@ Color calculateAppBarBGColor({
   required Color? appBarBackgroundColor,
   required bool centeredTitleSmall,
 }) {
-  Color appBarBGColorCalculated = appBarBackgroundColor == null
-      ? Theme.of(context).colorScheme.secondaryContainer
-      : appBarBackgroundColor;
+  Color appBarBGColorCalculated =
+      appBarBackgroundColor ?? Theme.of(context).colorScheme.surface;
   if (centeredTitleSmall && getPlatform() == PlatformOS.isIOS) {
     appBarBGColorCalculated =
         appBarBackgroundColor ?? Theme.of(context).colorScheme.background;
@@ -1276,9 +1279,6 @@ class BlurBehind extends StatelessWidget {
   }
 }
 
-double MIN_HEIGHT_FOR_HEADER = 700;
-double MAX_HEIGHT_FOR_HEADER = 855;
-
 bool getCenteredTitle(
     {required BuildContext context, required bool backButtonEnabled}) {
   if (getCenteredTitleSmall(
@@ -1293,44 +1293,14 @@ bool getCenteredTitle(
 
 bool getCenteredTitleSmall(
     {required BuildContext context, required bool backButtonEnabled}) {
-  if (backButtonEnabled &&
-      (MediaQuery.sizeOf(context).height <= MIN_HEIGHT_FOR_HEADER ||
-          appStateSettings["forceSmallHeader"] == true)) {
-    return true;
-  } else if (backButtonEnabled && getPlatform() == PlatformOS.isIOS) {
+  if (backButtonEnabled && getPlatform() == PlatformOS.isIOS) {
     return true;
   }
   return false;
 }
 
+// Cabeçalho compacto em todas as telas: título na mesma linha do voltar,
+// sem a área expandida vazia acima do título.
 double getExpandedHeaderHeight(
-    BuildContext context, double? expandedHeightPassed,
-    {bool? isHomePageSpace}) {
-  if (expandedHeightPassed != null) return expandedHeightPassed;
-  double height = MediaQuery.sizeOf(context).height;
-
-  double minHeaderHeight = getPlatform() == PlatformOS.isIOS
-      ? isHomePageSpace == true
-          ? 0
-          : 100
-      : 110;
-  double maxHeaderHeight = getPlatform() == PlatformOS.isIOS
-      ? isHomePageSpace == true
-          ? 0
-          : 100
-      : 200;
-
-  if (height >= MAX_HEIGHT_FOR_HEADER &&
-      appStateSettings["forceSmallHeader"] != true) {
-    return maxHeaderHeight;
-  } else if (height <= MIN_HEIGHT_FOR_HEADER ||
-      appStateSettings["forceSmallHeader"] == true) {
-    return minHeaderHeight;
-  } else {
-    double heightPercentage = (height - MIN_HEIGHT_FOR_HEADER) /
-        (MAX_HEIGHT_FOR_HEADER - MIN_HEIGHT_FOR_HEADER);
-    double expandedHeaderHeight = minHeaderHeight +
-        heightPercentage * (maxHeaderHeight - minHeaderHeight);
-    return expandedHeaderHeight;
-  }
-}
+        BuildContext context, double? expandedHeightPassed) =>
+    expandedHeightPassed ?? 56;

@@ -994,7 +994,6 @@ class TransactionsEntriesSpendingSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double borderRadius = getPlatform() == PlatformOS.isIOS ? 5 : 10;
     return AnimatedExpanded(
       axis: Axis.vertical,
       expand: show,
@@ -1004,7 +1003,7 @@ class TransactionsEntriesSpendingSummary extends StatelessWidget {
           vertical: 5,
         ),
         child: OpenContainerNavigation(
-          borderRadius: borderRadius,
+          borderRadius: 12,
           openPage: WalletDetailsPage(
             wallet: null,
             initialSearchFilters: SearchFilters(
@@ -1013,12 +1012,8 @@ class TransactionsEntriesSpendingSummary extends StatelessWidget {
           ),
           button: (openContainer) {
             return Tappable(
-              borderRadius: borderRadius,
-              color: appStateSettings["materialYou"]
-                  ? dynamicPastel(
-                      context, Theme.of(context).colorScheme.secondaryContainer,
-                      amountDark: 0.5, amountLight: 0)
-                  : getColor(context, "canvasContainer"),
+              borderRadius: 12,
+              color: getColor(context, "standardContainerColor"),
               onTap: () {
                 // setState(() {
                 //   isExpanded = !isExpanded;
