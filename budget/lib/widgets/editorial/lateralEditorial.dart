@@ -181,13 +181,18 @@ class _ItemNavegacao extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = cores(context);
+    // Nó próprio com nome único e toque: leitores de tela e testes acham "Transações".
     return Semantics(
+      container: true,
       button: true,
       selected: ativo,
       label: rotulo,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      excludeSemantics: true,
+      // InkWell: recebe foco por Tab e aciona com Enter/Espaço.
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           height: 44,
           margin: const EdgeInsets.symmetric(vertical: 1),

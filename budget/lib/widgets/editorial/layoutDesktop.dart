@@ -98,7 +98,9 @@ class LayoutDesktop extends StatelessWidget {
               ),
               child: lateral ?? const LateralEditorial(),
             ),
-            Expanded(child: conteudo),
+            // Limite semântico: uma rota modal no conteúdo (BlockSemantics) não some com a lateral
+            // dos leitores de tela.
+            Expanded(child: Semantics(container: true, child: conteudo)),
             ValueListenableBuilder<String?>(
               valueListenable: mbTransacaoSelecionada,
               builder: (context, pk, _) => pk == null
