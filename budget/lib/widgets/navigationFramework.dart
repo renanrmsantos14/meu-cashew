@@ -1,5 +1,5 @@
 import 'package:budget/widgets/editorial/layoutDesktop.dart'
-    show mbPaginaAtual, ObservadorPaginas;
+    show ehDesktop, mbPaginaAtual, ObservadorPaginas;
 import 'package:budget/widgets/editorial/versaoCanto.dart'
     show FaixaVersao, mbAlturaFaixaVersao;
 import 'dart:async';
@@ -31,6 +31,7 @@ import 'package:budget/pages/premiumPage.dart';
 import 'package:budget/pages/settingsPage.dart';
 import 'package:budget/pages/subscriptionsPage.dart';
 import 'package:budget/pages/transactionsListPage.dart';
+import 'package:budget/pages/transacoesDesktop.dart';
 import 'package:budget/pages/upcomingOverdueTransactionsPage.dart';
 import 'package:budget/pages/walletDetailsPage.dart';
 import 'package:budget/pages/creditDebtTransactionsPage.dart';
@@ -365,7 +366,11 @@ Future<bool> runAllCloudFunctions(BuildContext context,
 class PageNavigationFrameworkState extends State<PageNavigationFramework> {
   final List<Widget> pages = [
     HomePage(key: homePageStateKey), // 0
-    TransactionsListPage(key: transactionsListPageStateKey), //1
+    // Computador: tabela com detalhe ao lado; celular: lista do Cashew.
+    Builder(
+        builder: (context) => ehDesktop(context)
+            ? const TransacoesDesktop()
+            : TransactionsListPage(key: transactionsListPageStateKey)), //1
     BudgetsListPage(key: budgetsListPageStateKey, enableBackButton: false), //2
     MoreActionsPage(key: settingsPageStateKey), //3
   ];
@@ -545,7 +550,9 @@ class PageNavigationFrameworkState extends State<PageNavigationFramework> {
                 routesToPopAfterDelete: RoutesToPopAfterDelete.None,
               ),
             ),
-            condition: [0, 1, 2, 14].contains(currentPage),
+            // No computador o "Nova transação" fica na lateral.
+            condition:
+                [0, 1, 2, 14].contains(currentPage) && !ehDesktop(context),
           ),
         ),
       ),

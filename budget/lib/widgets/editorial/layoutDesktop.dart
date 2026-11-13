@@ -3,11 +3,13 @@ import 'package:budget/struct/editorial.dart';
 import 'package:budget/widgets/editorial/detalheTransacao.dart';
 import 'package:budget/widgets/editorial/lateralEditorial.dart';
 import 'package:budget/widgets/navigationFramework.dart';
+import 'package:budget/widgets/editorial/painelTransacao.dart';
 import 'package:flutter/material.dart';
 
 const double mbLarguraDesktop = 1100;
 const double mbLarguraLateral = 232;
 const double mbLarguraDetalhe = 360;
+const double mbLarguraFormulario = 420;
 
 bool ehDesktop(BuildContext c) =>
     MediaQuery.sizeOf(c).width >= mbLarguraDesktop;
@@ -101,23 +103,33 @@ class LayoutDesktop extends StatelessWidget {
             // Limite semântico: uma rota modal no conteúdo (BlockSemantics) não some com a lateral
             // dos leitores de tela.
             Expanded(child: Semantics(container: true, child: conteudo)),
-            ValueListenableBuilder<String?>(
-              valueListenable: mbTransacaoSelecionada,
-              builder: (context, pk, _) => pk == null
-                  ? const SizedBox.shrink()
-                  : Container(
-                      width: mbLarguraDetalhe,
-                      decoration: BoxDecoration(
-                        color: e.surf,
-                        border: Border(left: BorderSide(color: e.line)),
-                      ),
-                      child: DetalheTransacao(
-                        key: ValueKey(pk),
-                        pk: pk,
-                        carregar: carregarDetalhe,
-                        aoMudarCategoria: aoMudarCategoria,
-                      ),
-                    ),
+            // Coluna 3: formulário (nova/editar) tem prioridade sobre o detalhe.
+            ListenableBuilder(
+              listenable: Listenable.merge(
+                  [mbEdicaoDesktop, mbTransacaoSelecionada, mbEdicoesSalvas]),
+              builder: (context, _) {
+                final edicao = mbEdicaoDesktop.value;
+                final pk = mbTransacaoSelecionada.value;
+                if (edicao == null && pk == null) return const SizedBox.shrink();
+                return Container(
+                  width: edicao != null ? mbLarguraFormulario : mbLarguraDetalhe,
+                  decoration: BoxDecoration(
+                    color: e.surf,
+                    border: Border(left: BorderSide(color: e.line)),
+                  ),
+                  child: edicao != null
+                      ? FormularioTransacao(
+                          key: ValueKey(edicao),
+                          edicao: edicao,
+                          transacao: edicao.transacao)
+                      : DetalheTransacao(
+                          key: ValueKey('$pk-${mbEdicoesSalvas.value}'),
+                          pk: pk!,
+                          carregar: carregarDetalhe,
+                          aoMudarCategoria: aoMudarCategoria,
+                        ),
+                );
+              },
             ),
           ],
         ));

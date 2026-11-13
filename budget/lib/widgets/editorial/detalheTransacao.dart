@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:budget/database/tables.dart';
-import 'package:budget/functions.dart';
 import 'package:budget/pages/addTransactionPage.dart';
 import 'package:budget/struct/databaseGlobal.dart';
 import 'package:budget/struct/editorial.dart';
@@ -11,6 +10,7 @@ import 'package:budget/struct/mbSync/estadoInicio.dart';
 import 'package:budget/struct/mbSync/mapeamento.dart';
 import 'package:budget/struct/meuBancoMapping.dart';
 import 'package:budget/widgets/editorial/layoutDesktop.dart';
+import 'package:budget/widgets/editorial/painelTransacao.dart';
 import 'package:budget/widgets/openSnackbar.dart';
 import 'package:budget/widgets/globalSnackbar.dart' show SnackbarMessage;
 import 'package:budget/widgets/openPopup.dart' show RoutesToPopAfterDelete;
@@ -444,12 +444,8 @@ class _DetalheTransacaoState extends State<DetalheTransacao> {
                             side: BorderSide(color: e.line),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8))),
-                        onPressed: () => pushRoute(
-                            context,
-                            AddTransactionPage(
-                                transaction: m.transacao,
-                                routesToPopAfterDelete:
-                                    RoutesToPopAfterDelete.None)),
+                        onPressed: () =>
+                            abrirTransacao(context, transacao: m.transacao),
                         child: const Text('Editar'),
                       ),
                     ),
